@@ -165,8 +165,32 @@ A scan of the folder on 2026-10-24 found:
   (2.103.2). The old version lacked
   `gh repo edit --accept-visibility-change-consequences`.
 
+## Update 2026-10-24: working model
+
+This replaces the "Mirror" column of §5 for ADRs and the README.
+
+- **Changes:** made with Claude Code in WSL (`~/src/homelab`).
+  - From there it can reach the cluster (`kubectl`/`helm` through the
+    Tailscale operator), the host (`ssh root@pve`) and the local
+    `site.env`, so it can edit, apply, verify and commit in one session.
+  - `CLAUDE.md` holds the rules: ADRs for decisions, placeholders only,
+    render before Helm, pre-commit never bypassed, ask before destructive
+    operations.
+- **Design discussions:** stay in the claude.ai Project.
+  - Instead of copying ADRs into the Project by hand, the repo is connected
+    as Project knowledge through the GitHub integration, with only `adr/`
+    and `README.md` selected.
+  - The sync is manual: press Sync after pushing.
+  - The hand-uploaded Project docs are removed once the integration is
+    connected, so there's one copy.
+- **Hand-offs:** a decision reached in a Project chat is handed to Claude
+  Code to write up and commit. The Project never holds a version the repo
+  doesn't have.
+
 ## Open items
 
+- Connect the repo to the Project (GitHub integration, `adr/` + `README.md`),
+  then delete the hand-uploaded Project docs.
 - Rotate the `terraform@pve` token and update `terraform.tfvars`, or switch
   to `TF_VAR_proxmox_api_token` only (ADR-0008).
 - ~~Create the GitHub repo, switch on secret scanning and push protection,

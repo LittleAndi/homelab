@@ -25,7 +25,8 @@ When a decision changes, update its **Status** and add a dated
 ## Open items
 
 - **ADR-0014**: public since 2026-10-24 with secret scanning + push
-  protection (MIT). Left: rotate the `terraform@pve` token; run
+  protection (MIT). Left: connect the repo to the Project (GitHub
+  integration) and remove the hand-uploaded docs; rotate the `terraform@pve` token; run
   `scripts/backup-local.sh` once; retire `NAS/adr`, `NAS/infra`,
   `NAS/README.md` in Nextcloud.
 - **ADR-0013**: run `infra/proxmox-microk8s/monitoring/host/20-setup-host-exporters.sh`
@@ -87,15 +88,16 @@ Where each kind of information lives (ADR-0014):
 
 | What | Master | Mirror |
 |---|---|---|
-| ADRs, README, `infra/`, `scripts/` | **This git repo** | ADRs + README in the Claude Project docs, identical text |
+| ADRs, README, `infra/`, `scripts/` | **This git repo** (changes via Claude Code in WSL, see `CLAUDE.md`) | `adr/` + README synced into the Claude Project via its GitHub integration (press Sync after a push) |
 | Site values, tfvars, tfstate, device backups | `site.env` and local files in the clone | `LOCAL_BACKUP_DIR` in Nextcloud; tokens in the password manager |
 | Manuals, superseded copies | Nextcloud `NAS/reference/`, `NAS/_archive/` | — |
 | Current status, loose ends | Project memory | Short notes only. Decisions go in an ADR |
 
 Rules:
 
-1. **A decision made in chat gets written up as an ADR in the same session**,
-   committed here and copied to the Project docs.
+1. **A decision made in chat gets written up as an ADR in the same session**
+   and committed here. A decision reached in a Project chat is handed to
+   Claude Code to write up; the Project only ever syncs from the repo.
 2. **The repo is the master copy.** If the Project differs, the repo wins.
 3. Memory never holds a decision on its own. If it matters later, it goes in an ADR.
 4. New ADRs: next number, `adr/adr-NNNN-short-name.md`, add a row above.
@@ -115,6 +117,7 @@ homelab/
 │   │                                    pvcs.yaml, loader-pod.yaml, storageclass, dump cronjob
 │   ├── proxmox-microk8s/monitoring/  ← ADR-0013: runbook, values.yaml, host exporters
 │   └── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
+├── CLAUDE.md                         ← rules for Claude Code in this repo
 ├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)
 └── .pre-commit-config.yaml           ← gitleaks + site-value check
