@@ -1,6 +1,6 @@
 # ADR-0014: Public Git Repo `homelab`; Site Values and Secrets Kept Local
 
-**Status:** Accepted 2026-10-24 — tree prepared, not pushed yet
+**Status:** Accepted 2026-10-24 — public at `github.com/LittleAndi/homelab` since 2026-10-24 (MIT)
 **Date:** 2026-10-24
 
 ## Context
@@ -145,13 +145,33 @@ A scan of the folder on 2026-10-24 found:
   `site.env` first. The pre-commit hook only knows values that are listed
   there.
 
+## Update 2026-10-24: pushed and public
+
+- **Repo:** `github.com/LittleAndi/homelab`, cloned in WSL at
+  `~/src/homelab`. The first commit is the cleaned tree from §1.
+- **Checks before going public:**
+  - `git ls-files` shows none of the local-only files from §2;
+  - `scripts/check-site-values.sh --all` passes;
+  - gitleaks found no leaks.
+- **Order of operations:**
+  - pushed as private, then switched to public with
+    `gh api -X PATCH repos/LittleAndi/homelab -f visibility=public`;
+  - secret scanning and push protection were switched on right after.
+    GitHub refuses both on a private repo on a free account (HTTP 422).
+- **Licence:** MIT, covering both the code and the docs (`LICENSE`).
+- **Project docs:** ADR-0009 to ADR-0013 in the Project now carry the same
+  redacted text as the repo.
+- **`gh` upgraded** from Ubuntu's 2.45.0 to GitHub's own apt repository
+  (2.103.2). The old version lacked
+  `gh repo edit --accept-visibility-change-consequences`.
+
 ## Open items
 
 - Rotate the `terraform@pve` token and update `terraform.tfvars`, or switch
   to `TF_VAR_proxmox_api_token` only (ADR-0008).
-- Create the GitHub repo, switch on secret scanning and push protection,
-  first push, then make it public.
-- Choose a licence (e.g. MIT for code, CC BY 4.0 for the docs), or none.
+- ~~Create the GitHub repo, switch on secret scanning and push protection,
+  first push, then make it public.~~ Done 2026-10-24.
+- ~~Choose a licence.~~ MIT, 2026-10-24.
 - Copy the local-only files into the clone, run `scripts/backup-local.sh`
   once, then retire `NAS/adr`, `NAS/infra` and `NAS/README.md` in Nextcloud.
-- Mirror the redacted ADRs and README to the Project docs.
+- ~~Mirror the redacted ADRs and README to the Project docs.~~ Done 2026-10-24.

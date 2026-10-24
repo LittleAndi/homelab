@@ -20,15 +20,14 @@ When a decision changes, update its **Status** and add a dated
 | [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26 except Azure sync |
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
 | [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted 2026-10-24 — not deployed yet |
-| [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted 2026-10-24 — not pushed yet |
+| [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
 
 ## Open items
 
-- **ADR-0014**: rotate the `terraform@pve` token; create the GitHub repo with
-  secret scanning + push protection; first push, then public; choose a
-  licence; copy the local-only files into the clone and run
-  `scripts/backup-local.sh`; retire `NAS/adr`, `NAS/infra`, `NAS/README.md`
-  in Nextcloud; mirror the redacted ADRs and README to the Project.
+- **ADR-0014**: public since 2026-10-24 with secret scanning + push
+  protection (MIT). Left: rotate the `terraform@pve` token; run
+  `scripts/backup-local.sh` once; retire `NAS/adr`, `NAS/infra`,
+  `NAS/README.md` in Nextcloud.
 - **ADR-0013**: run `infra/proxmox-microk8s/monitoring/host/20-setup-host-exporters.sh`
   on the host; pick and record the kube-prometheus-stack chart version;
   `helm install`; check all Prometheus targets are up; build the "Server
@@ -120,3 +119,7 @@ homelab/
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)
 └── .pre-commit-config.yaml           ← gitleaks + site-value check
 ```
+
+## Licence
+
+[MIT](LICENSE), for both the code and the docs.
