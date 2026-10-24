@@ -1,0 +1,22 @@
+# Temporary pod used once, to copy the old webroot (code + config.php +
+# themes) into the nextcloud-app PVC before the Helm install. Delete it
+# afterwards — runbook step 5.
+#
+#   kubectl apply -n nextcloud -f loader-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nc-loader
+spec:
+  restartPolicy: Never
+  containers:
+    - name: loader
+      image: alpine:3.22
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - name: app
+          mountPath: /seed
+  volumes:
+    - name: app
+      persistentVolumeClaim:
+        claimName: nextcloud-app

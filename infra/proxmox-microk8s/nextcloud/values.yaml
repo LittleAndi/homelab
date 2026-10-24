@@ -1,0 +1,113 @@
+# Nextcloud Helm chart values — ADR-0010.
+# Checked against nextcloud/helm chart 9.3.0 (appVersion 34.0.4), 2026-09-24.
+# Re-check with `helm show values nextcloud/nextcloud` if installing a newer chart.
+#
+# ${TAILNET} is filled in from site.env by scripts/render.sh (ADR-0014):
+#   helm upgrade nextcloud nextcloud/nextcloud -n nextcloud --version 9.3.0 \
+#     -f .rendered/infra/proxmox-microk8s/nextcloud/values.yaml
+# No secrets in this file (the repo is public). All
+# passwords live in Kubernetes Secrets created from the command line —
+# see migration-runbook.md step 0.
+#
+#   helm install nextcloud nextcloud/nextcloud -n nextcloud -f values.yaml
+
+# Like-for-like with the running Podman stack (nextcloud:34-apache, installed
+# 34.0.1). The migrated version.php says 34.0.1, so the container starts
+# without installing or upgrading anything. Bump to a newer 34.x tag *after*
+# the migration is verified; the image's entrypoint then runs `occ upgrade`.
+image:
+  flavor: apache
+  tag: 35.0.2-apache
+
+nextcloud:
+  host: nextcloud.${TAILNET}.ts.net
+  trustedDomains:
+    - nextcloud.${TAILNET}.ts.net
+
+  # Admin credentials are only used by a *fresh* install. This migration
+  # pre-seeds config.php, so no install runs — but the chart still needs the
+  # secret to exist. Created in runbook step 0.
+  existingSecret:
+    enabled: true
+    secretName: nextcloud-admin
+    usernameKey: nextcloud-username
+    passwordKey: nextcloud-password
+
+  # Same path as the old install (config.php datadirectory). Keeping it
+  # unchanged means no rewrite of oc_storages in the database.
+  datadir: /var/www/html/data
+
+  # Same runtime env as the old compose.yaml. The image's
+  # reverse-proxy.config.php reads these on every request.
+  extraEnv:
+    - name: OVERWRITEHOST
+      value: nextcloud.${TAILNET}.ts.net
+    - name: OVERWRITEPROTOCOL
+      value: https
+    - name: TRUSTED_PROXIES
+      value: "10.0.0.0/8" # covers MicroK8s pod CIDR 10.1.0.0/16 (Tailscale ingress proxy)
+
+# --- Database: our own MariaDB (mariadb.yaml), not the Bitnami subchart ---
+# The chart's bundled mariadb/redis subcharts pull bitnamilegacy/* images,
+# which Bitnami no longer updates. mariadb.yaml runs the official
+# mariadb:11.4 image instead, same as today, behind a Service named
+# `nextcloud-db` so the migrated config.php's dbhost works unchanged.
+internalDatabase:
+  enabled: false
+externalDatabase:
+  enabled: true
+  type: mysql
+  host: nextcloud-db
+  database: nextcloud
+  existingSecret:
+    enabled: true
+    secretName: nextcloud-db
+    usernameKey: db-username
+    passwordKey: db-password
+mariadb:
+  enabled: false
+
+# No Redis: the running stack has none (APCu local cache + DB file locking).
+# Like-for-like first; add Redis/Valkey later if file-locking contention shows up.
+redis:
+  enabled: false
+
+# --- Storage (ADR-0005 split) ---
+# App volume: code + config + themes, SSD, Retain. Pre-created (pvcs.yaml)
+# and pre-seeded from the old webroot (runbook step 5). The chart mounts
+# subdirectories of it: html/, config/, custom_apps/, themes/, tmp/, root/.
+persistence:
+  enabled: true
+  existingClaim: nextcloud-app
+  # User data: HDD mirror over NFS. The chart mounts the `data/` subdirectory
+  # of this PVC at /var/www/html/data.
+  nextcloudData:
+    enabled: true
+    existingClaim: nextcloud-data
+
+# Background jobs via a cron sidecar in the pod (the old stack had no cron
+# container). Switch Nextcloud to it with `occ background:cron` (runbook step 8).
+cronjob:
+  enabled: true
+  type: sidecar
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1536Mi
+
+# --- Tailscale operator ingress ---
+# The operator names the tailnet device after the first label of
+# tls.hosts[0] -> "nextcloud" -> nextcloud.${TAILNET}.ts.net, and accepts
+# rules whose host equals tls.hosts[0] (checked in the operator source,
+# cmd/k8s-operator/ingress.go). No secretName: Tailscale issues the cert.
+ingress:
+  enabled: true
+  className: tailscale
+  path: /
+  pathType: Prefix
+  tls:
+    - hosts:
+        - nextcloud.${TAILNET}.ts.net

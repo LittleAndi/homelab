@@ -1,0 +1,4 @@
+# LF everywhere: scripts run on Linux hosts even when edited on Windows.
+* text=auto eol=lf
+*.pdf binary
+*.bin binary

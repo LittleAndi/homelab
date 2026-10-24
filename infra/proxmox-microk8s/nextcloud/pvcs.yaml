@@ -1,0 +1,32 @@
+# Nextcloud volumes, created before the Helm release so they can be
+# pre-seeded with the migrated data — ADR-0010.
+#
+#   kubectl apply -n nextcloud -f pvcs.yaml
+#
+# nextcloud-app  -> SSD (local-path-retain). Binds to whichever node first
+#                   mounts it (the loader pod); the Nextcloud pod follows it
+#                   there automatically via the PV's node affinity.
+# nextcloud-data -> HDD mirror over NFS (nfs-client). Provisioned immediately
+#                   as a directory under /hdd-mirror/k8s on the Proxmox host,
+#                   named nextcloud-nextcloud-data-<pv-name>.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-app
+spec:
+  storageClassName: local-path-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi # code + config + themes; the old webroot minus data/ is ~1 GB
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data
+spec:
+  storageClassName: nfs-client
+  accessModes: [ReadWriteMany] # shared with the mariadb-dump CronJob
+  resources:
+    requests:
+      storage: 300Gi # 209 GB measured 2026-09-23 + ~90 GB headroom

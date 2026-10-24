@@ -1,0 +1,24 @@
+# Local-only values and their outputs (ADR-0014). Never commit these.
+site.env
+.rendered/
+*.local.yaml
+*.local.env
+
+# Terraform: real token, state with passwords/keys, provider cache.
+# Commit only *.tfvars.example and .terraform.lock.hcl.
+*.tfvars
+!*.tfvars.example
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+
+# Device backups (the Z-Stick NVM backup holds the Z-Wave network keys)
+infra/proxmox-ha/backup/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

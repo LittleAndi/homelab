@@ -1,0 +1,213 @@
+# ADR-0008: Proxmox VE + ZFS + 5-VM MicroK8s Cluster
+
+**Status:** Accepted — deployed and verified 2026-09-21. Supersedes ADR-0004 and ADR-0006.
+
+> The Decision section below is the original proposal. The dated Update
+> sections record what changed on the way to the deployed state; where they
+> differ, the Updates win.
+**Date:** 2026-09-21
+
+## Context
+
+The server's role grew beyond a single-purpose Nextcloud box: running
+Nextcloud alongside VMs for experimentation, and practising multi-node
+Kubernetes. ADR-0004 and ADR-0006 both named this kind of growth ("VMs,
+databases", "multi-node cluster") as the reason to revisit ZFS and Kubernetes.
+The Azure/rclone backup (ADR-0003) is still the disaster-recovery anchor.
+
+An earlier iteration planned 3 VMs (one Nextcloud VM with a reserved disk,
+plus two thin-provisioned playground VMs) and a separate 6TB ZFS pool exposed
+to them as ZVOLs. The design below replaces it.
+
+## Decision
+
+- **Hypervisor:** Proxmox VE on bare metal (API at `192.168.1.5:8006`, node `pve`).
+- **SSD pool:** 1TB SSD as a single-disk ZFS pool (`local-zfs`) that holds
+  Proxmox and all VM boot disks. Keep usage under ~80% to avoid ZFS
+  allocator slowdown.
+- **HDD pool:** the two 2TB WD HDDs as a ZFS **mirror** (`hddmirror`),
+  chosen over striping so one drive failure doesn't lose the pool. Dataset
+  `hddmirror/nextcloud-data` is NFS-exported to the LAN.
+- **Cluster:** 5 Ubuntu 26.04 VMs cloned from a cloud-init template (VMID 9000):
+
+  | Node | VMID | IP | vCPU | RAM | Disk |
+  |---|---|---|---|---|---|
+  | cp1–cp3 (control plane / dqlite) | 101–103 | 192.168.1.10–.12 | 2 | 5 GB | 40 GB |
+  | wk1–wk2 (workers) | 104–105 | 192.168.1.13–.14 | 4 | 6 GB | 60 GB |
+
+  Static IPs sit outside the router's DHCP pool (192.168.1.64–.243).
+- **Control-plane disks** get a hard ZFS `refreservation` (40G each). That
+  way thin-provisioned worker disks filling the pool can't starve dqlite's
+  writes.
+- **Tooling:** Terraform (`bpg/proxmox` provider) provisions the VMs.
+  Ansible with the community `istvano.microk8s` role forms the cluster, which
+  avoids hand-rolled join-token logic.
+- **Storage for workloads:** `nfs-subdir-external-provisioner` as the default
+  StorageClass `nfs-client`, backed by the ZFS mirror. The `hostpath-storage`
+  addon is disabled so PVCs don't land on boot disks.
+- **Backups:** snapshot each ZFS dataset and point the existing Azure/rclone
+  pipeline at `.zfs/snapshot/…` instead of the live directory, for
+  crash-consistent backups.
+
+## Alternatives considered
+
+- **Keep bare-metal Linux + Podman + mergerfs (ADR-0004/0006)**: simpler and
+  lighter, but no VM isolation for experiments and no Kubernetes practice.
+- **3-VM layout with a Nextcloud VM + ZVOL-backed disks** (earlier plan):
+  replaced by the cluster + NFS StorageClass design.
+- **k3s**: not chosen; MicroK8s with an existing Ansible role was preferred.
+
+## Consequences
+
+- Supersedes ADR-0004 (mergerfs) and ADR-0006 (Podman) once accepted.
+  ADR-0005's tiering principle carries over (SSD pool vs HDD mirror).
+  ADR-0007's stack has to be re-platformed onto Kubernetes.
+- 3 control-plane nodes on one physical host give quorum practice, not
+  hardware HA. The host is still a single point of failure.
+- VM RAM adds up to 27 GB before Proxmox/ZFS ARC overhead, so it has to fit
+  the server's installed RAM.
+- NFS with `no_root_squash` exported to the whole /24 is broad. Consider
+  narrowing it to the 5 node IPs. *(Done, see storage-layout update.)*
+
+## Update 2026-09-21: validated against the live host
+
+Checked the running Proxmox host (PVE 9.2.20, Ryzen 7 7700, 32 GB RAM) via
+its API. Nothing deployed yet: no VMs, no template 9000, no API token.
+Changes to the decision above, applied in `infra/proxmox-microk8s/`:
+
+- **Addressing.** The Proxmox host is at **192.168.1.10**, not `.5`. Servers
+  (VMs) use **192.168.1.20–.63**. Cluster nodes move to
+  cp1–cp3 = `.20–.22`, wk1–wk2 = `.23–.24`. `NFS_SERVER` = `.10`.
+- **HDD pool name** is **`hdd-mirror`** (already created, ONLINE, both WD
+  disks by-id, also registered as Proxmox storage). Dataset path is
+  `hdd-mirror/nextcloud-data`, exported at `/hdd-mirror/nextcloud-data`.
+  `01-setup-zfs-nfs.sh` no longer creates the pool.
+- **VM DNS** is set explicitly (`dns_servers`, default `192.168.1.1`). The
+  host's resolvers are Tailscale-only, which the VMs can't reach.
+- `local-zfs` = `rpool/data` on the 1 TB NVMe (confirmed).
+
+Host prerequisites found missing (README step 0):
+
+- No `vmbr0`. The host runs on Wi-Fi (`wlp5s0`); wired `nic0` is
+  unconfigured. Wi-Fi can't be bridged, so a wired `vmbr0` on `nic0` is
+  required before the template or VMs can have networking.
+- Host DNS has no LAN fallback if tailscaled is down.
+- Only `root@pam` exists; a `terraform@pve` API token is needed.
+- RAM was tight: 27 GB VMs + ~3 GB ARC on 32 GB with no swap (resolved
+  below).
+
+## Update 2026-09-21: VM RAM reduced
+
+- **Control plane 3 GB each, workers 4 GB each: 17 GB total** (was 27 GB).
+  That leaves ~15 GB for Proxmox, ZFS ARC and headroom on the 32 GB host.
+- **Fixed allocation, no ballooning.** Kubernetes schedules against a node's
+  maximum memory, so ballooning would let it over-commit what the host can
+  actually give back.
+- **Grow later as needed:** raise `memory` in `terraform/main.tf`, apply, then
+  drain → reboot → uncordon one node at a time. 3 control-plane nodes keep
+  quorum during the rolling reboot.
+- MicroK8s control-plane nodes also run workloads by default, so all
+  5 nodes add to usable capacity.
+
+## Update 2026-09-21: storage layout
+
+Discussed NFS vs. block volumes (ZVOL virtual disks) for Nextcloud, which is
+currently the only workload needing storage. Decision:
+
+- **VM OS disks always on the SSD** (`local-zfs`). `hdd-mirror` holds bulk
+  data only (ADR-0005's tiering carries over).
+- **NFS for Nextcloud user files.** Chosen over a ZVOL data disk mainly so
+  the data stays as plain files in a host-side ZFS dataset: the existing
+  snapshot → rclone → Azure backup runs on the host unchanged, and the data
+  survives a cluster rebuild. It also allows several Nextcloud pods later
+  (RWX). Accepted costs: NFS service on the host, sync writes to HDD are
+  slower for many small files. Raw throughput is HDD-bound either way.
+- **Not NFS for the database.** InnoDB on NFS is discouraged (locking/fsync
+  semantics), and the NFS tier is HDD anyway. MariaDB and the Nextcloud
+  app/config volume use `local-path-provisioner` (StorageClass `local-path`,
+  non-default) on a node's SSD boot disk. The pod is pinned to that node,
+  which costs little on a single physical host. Proxmox CSI plugin is the
+  upgrade path if more stateful apps arrive.
+- **DB backup:** nightly `mariadb-dump` CronJob writing to the NFS share, so
+  everything worth keeping ends up as files on `hdd-mirror` and in the Azure
+  pipeline. (Designed with the Nextcloud migration.)
+- **One dataset + one NFS export per consumer.** Cluster storage is
+  `hdd-mirror/k8s` (replaces `hdd-mirror/nextcloud-data`), 500G reservation,
+  exported via `/etc/exports.d/k8s.exports` to the 5 node IPs only
+  (`no_root_squash` makes a /24 export unsafe). A future playground VM gets
+  either a plain data disk on `hdd-mirror` or its own dataset/export with a
+  quota, never access to `k8s`.
+
+## Update 2026-09-21: own Ansible playbook instead of istvano.microk8s
+
+The first run with the `istvano.microk8s` role left five standalone
+single-node clusters on MicroK8s 1.27 with hostpath-storage, registry and
+dashboard enabled. The role (last change March 2024) defaults to
+`1.27/stable`, only clusters with `microk8s_enable_HA` + a `microk8s_HA`
+group, and ships add-on defaults that contradict this ADR.
+
+- Replaced with a short playbook using only `ansible.builtin`
+  (`infra/proxmox-microk8s/ansible/`): pinned channel **1.35/stable**
+  (`vars.yml`), snap auto-refresh held, joins via one-time tokens
+  (cp2/cp3 control plane, wk1/wk2 `--worker`, serially), `/etc/hosts`
+  entries for all nodes.
+- Add-ons: dns (upstream 192.168.1.1), rbac, metrics-server, helm3.
+  hostpath-storage, registry, dashboard kept disabled.
+- Channel mismatch stops the run unless `-e microk8s_reset=true` (purge +
+  reinstall). Upgrades are manual, one node at a time.
+- Tooling bullet in the Decision section ("community `istvano.microk8s`
+  role") is superseded by this.
+
+## Update 2026-09-21: deployed and verified
+
+Everything in `infra/proxmox-microk8s/` has been run against the host.
+
+- **Cluster:** 5 nodes Ready on MicroK8s **v1.35.6** (containerd 2.1.6,
+  Ubuntu 26.04.1, guest kernel 7.0). `high-availability: yes`, dqlite voters
+  `.20`, `.21`, `.22`. Add-ons: dns, rbac, metrics-server, helm3 (plus
+  MicroK8s' own ha-cluster and helm).
+- **Storage:** StorageClasses `nfs-client` (default, `hdd-mirror/k8s` via
+  NFS) and `local-path` (local-path-provisioner **v0.0.37**, node SSD).
+  Smoke test passed: RWX claim on NFS and RWO claim on local-path both
+  bound; the file written over NFS appeared in `/hdd-mirror/k8s/` on the
+  host. Test resources removed.
+- **Host:** 120 GiB refreservation on the 3 control-plane disks; `local-zfs`
+  ~14% used.
+
+Fixes found during deployment (all in the scripts/playbook now):
+
+- Template image gets `qemu-guest-agent` via `virt-customize` (script 00);
+  without it Terraform waits for the agent timeout.
+- VMs use CPU type `host`, `discard=on` + agent `trim` (thin-provisioned
+  ZFS), cloud-init drive on `local-zfs`.
+- Every node needs `nfs-common`; without it the kubelet can't mount NFS
+  volumes (`bad option … mount.<type> helper`). Installed by the playbook.
+- Playbook waits for a joined node to register before `kubectl wait`, and
+  writes the `/etc/hosts` block into the cloud-init template too
+  (`manage_etc_hosts: true` rewrites `/etc/hosts` on boot).
+- API token is passed as `TF_VAR_proxmox_api_token`, not stored in
+  `terraform.tfvars` (the folder syncs to Nextcloud).
+- Proxmox shows the VMs at ~100% memory because ballooning is off, so it
+  only sees allocated RAM. Real usage: `free -h` in the guest or
+  `kubectl top nodes`.
+
+## Open items
+
+- ~~Confirm this ADR (Proposed → Accepted) and mark ADR-0004/0006 Superseded.~~
+  Done 2026-09-21.
+- ~~`scripts/03-setup-nfs-provisioner.sh` has `NFS_SERVER="192.168.1.1"`~~
+  Fixed 2026-09-21 (now `.10`, see Update).
+- ~~Host prerequisites: wired `vmbr0`, DNS fallback, Terraform API token.~~
+  Done 2026-09-21: `vmbr0` on `nic0` (.10), Wi-Fi and wpa_supplicant disabled;
+  `tailscale set --accept-dns=false`, host DNS `192.168.1.1`; `terraform@pve`
+  with token `tf` and role `TerraformProv` on `/`; kernel 7.0.14-19.
+  Terraform now also places the cloud-init drive on `local-zfs`
+  (provider default `local-lvm` doesn't exist here).
+- Design the Nextcloud/MariaDB/Redis deployment into the cluster (new ADR,
+  replaces ADR-0007's Compose stack). Include a `local-path` StorageClass
+  with `reclaimPolicy: Retain` for MariaDB (the default `local-path` deletes
+  data with the PVC).
+- Point the Azure/rclone backup at snapshots of `hdd-mirror/k8s`
+  (`.zfs/snapshot/…`); not set up yet.
+- Role of the 1TB HDD(s) and the planned 6TB drive(s) under this design (see ADR-0009).
+  Live host shows one 1 TB HGST (`sdc`, blank) and a 512 GB Samsung SSD with NTFS (`sdd`).

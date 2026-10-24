@@ -1,0 +1,176 @@
+# kube-prometheus-stack values for the MicroK8s cluster (ADR-0013).
+#
+# ${TAILNET} is filled in from site.env by scripts/render.sh (ADR-0014).
+# Install / upgrade from the repo root (always pass --version; see README.md):
+#   scripts/render.sh
+#   helm upgrade --install kube-prometheus-stack \
+#     prometheus-community/kube-prometheus-stack -n monitoring \
+#     -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml --version <CHART_VERSION>
+#
+# No secrets in this file: the repo is public. Grafana's admin login comes
+# from the Secret `grafana-admin`, created on the command line (README.md).
+
+# ---------------------------------------------------------------------------
+# MicroK8s runs kube-scheduler, kube-controller-manager and kube-proxy inside
+# `kubelite` and uses dqlite instead of etcd. None of them exposes the
+# endpoints these jobs look for, so they would always show as down.
+# ---------------------------------------------------------------------------
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+defaultRules:
+  rules:
+    etcd: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeControllerManager: false
+    kubeProxy: false
+
+# No alerts for now (ADR-0013).
+alertmanager:
+  enabled: false
+
+# ---------------------------------------------------------------------------
+# Prometheus
+# ---------------------------------------------------------------------------
+prometheus:
+  prometheusSpec:
+    retention: 30d
+    retentionSize: 18GB        # hard cap below the 20Gi PVC
+    scrapeInterval: 30s
+    resources:
+      requests:
+        cpu: 200m
+        memory: 768Mi
+      limits:
+        memory: 2Gi
+    # TSDB on the node's SSD boot disk. Not NFS: Prometheus doesn't support
+    # NFS for its TSDB. Retain, so a helm uninstall keeps the history.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path-retain
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    # Prefer wk2: wk1 carries MariaDB. local-path pins the pod to wherever the
+    # PVC is first bound, so this only matters on the first install.
+    # Check node names with `kubectl get nodes`.
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values: ["wk2"]
+    # Pick up ServiceMonitors/PodMonitors/rules from any namespace and release,
+    # not only those created by this chart.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+    # Exporters on the Proxmox host (host/20-setup-host-exporters.sh).
+    # The host only accepts these ports from the node IPs .20-.24; Calico
+    # SNATs pod traffic leaving the cluster to the node IP.
+    additionalScrapeConfigs:
+      - job_name: pve-node
+        static_configs:
+          - targets: ["192.168.1.10:9100"]
+            labels:
+              instance: pve
+      - job_name: pve-smartctl
+        scrape_interval: 60s
+        static_configs:
+          - targets: ["192.168.1.10:9633"]
+            labels:
+              instance: pve
+      - job_name: pve
+        metrics_path: /pve
+        params:
+          module: ["default"]
+          cluster: ["1"]
+          node: ["1"]
+        static_configs:
+          - targets: ["192.168.1.10:9221"]
+            labels:
+              instance: pve
+
+# ---------------------------------------------------------------------------
+# Grafana
+# ---------------------------------------------------------------------------
+grafana:
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  # Keeps dashboards made in the UI across pod restarts. Finished dashboards
+  # are exported to dashboards/ as ConfigMaps (label grafana_dashboard: "1").
+  persistence:
+    enabled: true
+    type: pvc
+    storageClassName: local-path-retain
+    accessModes: ["ReadWriteOnce"]
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      memory: 512Mi
+
+  # Tailscale operator, same pattern as Nextcloud (ADR-0010 §4): the device
+  # name is the first label of tls.hosts[0], and the rule host must equal it.
+  ingress:
+    enabled: true
+    ingressClassName: tailscale
+    hosts:
+      - grafana.${TAILNET}.ts.net
+    tls:
+      - hosts:
+          - grafana.${TAILNET}.ts.net
+
+  grafana.ini:
+    server:
+      root_url: https://grafana.${TAILNET}.ts.net
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+      check_for_plugin_updates: false
+
+  # Grafana.com dashboards, downloaded by an init container at start-up.
+  # TODO (ADR-0013 open item): replace `latest` with pinned revisions.
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: homelab
+          orgId: 1
+          folder: Homelab
+          type: file
+          disableDeletion: true
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/homelab
+  dashboards:
+    homelab:
+      node-exporter-full:
+        url: https://grafana.com/api/dashboards/1860/revisions/latest/download
+        datasource:
+          - name: DS_PROMETHEUS
+            value: Prometheus
+      proxmox-via-prometheus:
+        url: https://grafana.com/api/dashboards/10347/revisions/latest/download
+        datasource:
+          - name: DS_PROMETHEUS
+            value: Prometheus

@@ -1,0 +1,13 @@
+# Install once per clone:  pipx install pre-commit && pre-commit install
+# Update hook versions:    pre-commit autoupdate
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: site-values
+        name: block real site values (site.env)
+        entry: scripts/check-site-values.sh
+        language: script

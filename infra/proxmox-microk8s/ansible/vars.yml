@@ -1,0 +1,15 @@
+---
+# 1.36 is the newest; 1.35 is one step behind with more patch releases.
+microk8s_channel: "1.35/stable"
+
+microk8s_addons:
+  - { name: dns, arg: "192.168.1.1" }   # CoreDNS, upstream = router (not 8.8.8.8)
+  - { name: rbac }
+  - { name: metrics-server }
+  - { name: helm3 }
+
+# hostpath-storage is replaced by nfs-client + local-path (script 03).
+microk8s_addons_disabled:
+  - hostpath-storage
+  - registry
+  - dashboard

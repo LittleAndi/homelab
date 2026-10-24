@@ -1,0 +1,16 @@
+# Second StorageClass on the existing rancher.io/local-path provisioner
+# (already running as the `local-path` addon per ADR-0008), differing only
+# in reclaimPolicy. Reclaim policy is enforced by Kubernetes at the
+# StorageClass level, not by the provisioner, so no second provisioner
+# deployment is needed — this object alone is sufficient.
+#
+# Use for: MariaDB primary data, Nextcloud app/config PVC.
+# Do NOT use for: Redis (plain `local-path` is fine — it's disposable cache).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-retain
+provisioner: rancher.io/local-path
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true

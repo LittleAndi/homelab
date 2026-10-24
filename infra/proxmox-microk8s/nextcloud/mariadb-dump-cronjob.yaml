@@ -1,0 +1,46 @@
+# Nightly mariadb-dump onto the NFS/HDD tier — ADR-0010.
+# Writes to db-dumps/ at the root of the nextcloud-data PVC, next to (not
+# inside) Nextcloud's data/ directory, so it lands on hdd-mirror/k8s and rides
+# the same Azure/rclone pipeline once ADR-0008's snapshot item is done.
+#
+#   kubectl apply -n nextcloud -f mariadb-dump-cronjob.yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mariadb-dump
+spec:
+  schedule: "30 2 * * *" # 02:30 daily — before the ZFS snapshot/backup window
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mariadb-dump
+              image: mariadb:11.4
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  mkdir -p /backup/db-dumps
+                  ts=$(date +%Y%m%d-%H%M%S)
+                  mariadb-dump --single-transaction --routines --triggers \
+                    -h nextcloud-db -u "$DB_USER" -p"$DB_PASSWORD" nextcloud \
+                    > "/backup/db-dumps/nextcloud-${ts}.sql"
+                  find /backup/db-dumps -name 'nextcloud-*.sql' -mtime +14 -delete
+              env:
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef: { name: nextcloud-db, key: db-username }
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: nextcloud-db, key: db-password }
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+          volumes:
+            - name: backup
+              persistentVolumeClaim:
+                claimName: nextcloud-data

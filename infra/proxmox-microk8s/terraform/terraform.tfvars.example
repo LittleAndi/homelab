@@ -1,0 +1,8 @@
+proxmox_endpoint  = "https://192.168.1.10:8006/"
+proxmox_api_token = "terraform@pve!tf-token=00000000-0000-0000-0000-000000000000"
+proxmox_node      = "pve"
+template_vmid     = 9000
+boot_storage      = "local-zfs"
+gateway           = "192.168.1.1"
+dns_servers       = ["192.168.1.1"]
+ssh_public_key    = "ssh-ed25519 AAAA... you@workstation"

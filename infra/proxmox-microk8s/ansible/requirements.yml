@@ -1,0 +1,4 @@
+# No external roles or collections needed: playbook.yml only uses
+# ansible.builtin. (Previously: istvano.microk8s, removed 2026-09-21.)
+roles: []
+collections: []

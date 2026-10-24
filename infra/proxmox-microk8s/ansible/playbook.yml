@@ -1,0 +1,172 @@
+---
+# Own MicroK8s bootstrap (replaces the unmaintained istvano.microk8s role,
+# which defaulted to 1.27, never clustered with our group names and enabled
+# hostpath-storage/registry/dashboard). Only uses ansible.builtin modules.
+#
+# First run over the leftover 1.27 installs:
+#   ansible-playbook -i inventory.ini playbook.yml -e microk8s_reset=true
+# Normal (idempotent) runs:
+#   ansible-playbook -i inventory.ini playbook.yml
+#
+# Upgrades are deliberately NOT done here: change channel one node at a time
+# with `sudo snap refresh microk8s --channel=X/stable`, then update
+# microk8s_channel below.
+
+- name: Install MicroK8s on all nodes
+  hosts: k8s
+  become: true
+  vars_files: [vars.yml]
+  tasks:
+    # Proxmox's cloud-init sets manage_etc_hosts, which rewrites /etc/hosts
+    # from a template on every boot. Put the block in the template too, so it
+    # survives reboots.
+    - name: Find cloud-init hosts template
+      ansible.builtin.stat:
+        path: /etc/cloud/templates/hosts.debian.tmpl
+      register: hosts_tmpl
+
+    - name: Nodes can resolve each other by hostname
+      ansible.builtin.blockinfile:
+        path: "{{ item }}"
+        marker: "# {mark} MICROK8S NODES (ansible)"
+        block: |
+          {% for h in groups['k8s'] %}
+          {{ hostvars[h].ansible_host }} microk8s-{{ h }}
+          {% endfor %}
+      loop: "{{ ['/etc/hosts'] + (['/etc/cloud/templates/hosts.debian.tmpl'] if hosts_tmpl.stat.exists else []) }}"
+
+    # The kubelet mounts NFS volumes on the node itself, so every node needs
+    # the NFS client (mount.nfs). Not in the Ubuntu cloud image.
+    - name: NFS client for nfs-client volumes
+      ansible.builtin.apt:
+        name: nfs-common
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Read installed MicroK8s channel
+      ansible.builtin.shell: "snap info microk8s | awk '/^tracking:/ {print $2}'"
+      register: installed_channel
+      changed_when: false
+
+    - name: Refuse to touch a different channel unless asked
+      ansible.builtin.fail:
+        msg: >-
+          MicroK8s tracks {{ installed_channel.stdout }}, wanted {{ microk8s_channel }}.
+          Re-run with -e microk8s_reset=true to purge and reinstall (destroys the
+          node's cluster state), or upgrade manually.
+      when:
+        - installed_channel.stdout | length > 0
+        - installed_channel.stdout != microk8s_channel
+        - not (microk8s_reset | default(false) | bool)
+
+    - name: Purge mismatched MicroK8s (reset)
+      ansible.builtin.command: snap remove --purge microk8s
+      when:
+        - installed_channel.stdout | length > 0
+        - installed_channel.stdout != microk8s_channel
+        - microk8s_reset | default(false) | bool
+
+    - name: Install MicroK8s {{ microk8s_channel }}
+      ansible.builtin.command: "snap install microk8s --classic --channel={{ microk8s_channel }}"
+      args:
+        creates: /snap/bin/microk8s
+
+    - name: Hold snap auto-refresh (upgrades are manual, node by node)
+      ansible.builtin.command: snap refresh --hold microk8s
+      changed_when: false
+
+    # On a joined worker `microk8s status` exits non-zero with "acting as a
+    # node in a cluster" (no local control plane), so accept that on re-runs.
+    - name: Wait until MicroK8s is ready
+      ansible.builtin.command: /snap/bin/microk8s status --wait-ready --timeout 300
+      register: mk_ready
+      changed_when: false
+      failed_when:
+        - mk_ready.rc != 0
+        - "'acting as a node in a cluster' not in (mk_ready.stdout ~ mk_ready.stderr)"
+
+    - name: Let {{ ansible_user }} use microk8s without sudo
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: microk8s
+        append: true
+
+- name: Join cp2, cp3 and the workers to cp1 (one at a time)
+  hosts: k8s:!cp1
+  become: true
+  serial: 1
+  vars_files: [vars.yml]
+  tasks:
+    - name: Is this node already in the cluster?
+      ansible.builtin.command: "/snap/bin/microk8s kubectl get node microk8s-{{ inventory_hostname }}"
+      delegate_to: cp1
+      register: node_known
+      failed_when: false
+      changed_when: false
+
+    - name: Join
+      when: node_known.rc != 0
+      block:
+        - name: Create a one-time join token on cp1
+          ansible.builtin.command: >-
+            /snap/bin/microk8s add-node
+            --token {{ lookup('ansible.builtin.password', '/dev/null', length=32, chars=['ascii_letters', 'digits']) }}
+            --token-ttl 600 --format short
+          delegate_to: cp1
+          register: add_node
+
+        - name: Run the join command
+          ansible.builtin.command: >-
+            /snap/bin/microk8s join
+            {{ add_node.stdout_lines | select('search', hostvars['cp1'].ansible_host) | first | regex_replace('^microk8s join ', '') }}
+            {{ '--worker' if inventory_hostname in groups['workers'] else '' }}
+
+    # Outside the block so it also runs for nodes that joined on an earlier
+    # (failed) run. The node object appears some seconds after `join`
+    # returns, and `kubectl wait` fails immediately on NotFound, so poll for
+    # existence first.
+    - name: Wait until the node is registered
+      ansible.builtin.command: "/snap/bin/microk8s kubectl get node microk8s-{{ inventory_hostname }}"
+      delegate_to: cp1
+      register: node_registered
+      until: node_registered.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Wait until the node is Ready
+      ansible.builtin.command: >-
+        /snap/bin/microk8s kubectl wait --for=condition=Ready
+        node/microk8s-{{ inventory_hostname }} --timeout=300s
+      delegate_to: cp1
+      changed_when: false
+
+- name: Cluster add-ons (run once, on cp1)
+  hosts: cp1
+  become: true
+  vars_files: [vars.yml]
+  tasks:
+    - name: Read enabled add-ons
+      ansible.builtin.command: /snap/bin/microk8s status --format short
+      register: mk_status
+      changed_when: false
+
+    - name: Enable wanted add-ons
+      ansible.builtin.command: "/snap/bin/microk8s enable {{ item.name }}{{ ':' ~ item.arg if item.arg is defined else '' }}"
+      loop: "{{ microk8s_addons }}"
+      when: "('core/' ~ item.name ~ ': enabled') not in mk_status.stdout"
+
+    - name: Keep unwanted add-ons disabled
+      ansible.builtin.command: "/snap/bin/microk8s disable {{ item }}"
+      loop: "{{ microk8s_addons_disabled }}"
+      when: "('core/' ~ item ~ ': enabled') in mk_status.stdout"
+
+    - name: Cluster overview
+      ansible.builtin.command: /snap/bin/microk8s kubectl get nodes -o wide
+      register: nodes
+      changed_when: false
+
+    - name: Show nodes
+      ansible.builtin.debug:
+        var: nodes.stdout_lines

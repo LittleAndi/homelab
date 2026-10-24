@@ -1,0 +1,86 @@
+# MariaDB for Nextcloud — ADR-0010.
+# Official mariadb:11.4 image (same as the Podman stack), same server flags.
+# Service is named `nextcloud-db`, matching dbhost in the migrated config.php.
+# Credentials come from Secret `nextcloud-db` (runbook step 0), never this file.
+#
+#   kubectl apply -n nextcloud -f mariadb.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-db
+spec:
+  selector:
+    app: nextcloud-db
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nextcloud-db
+spec:
+  serviceName: nextcloud-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nextcloud-db
+  template:
+    metadata:
+      labels:
+        app: nextcloud-db
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:11.4
+          args:
+            - --transaction-isolation=READ-COMMITTED
+            - --log-bin=binlog
+            - --binlog-format=ROW
+            # Tuning (2026-10-23, Nextcloud 35 setupchecks): buffer pool was the
+            # 192M default (96.97% hit rate), redo log 96M. Buffer pool must fit
+            # inside the memory limit below, with headroom for connections.
+            - --innodb-buffer-pool-size=512M
+            - --innodb-log-file-size=256M
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: nextcloud-db, key: db-root-password }
+            - name: MARIADB_DATABASE
+              value: nextcloud
+            - name: MARIADB_USER
+              valueFrom:
+                secretKeyRef: { name: nextcloud-db, key: db-username }
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: nextcloud-db, key: db-password }
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              memory: 1536Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        storageClassName: local-path-retain
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 20Gi
