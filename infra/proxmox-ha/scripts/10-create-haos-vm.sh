@@ -105,7 +105,7 @@ done
 qm config "$VMID"
 echo
 if [ -n "$IP" ]; then
-  echo "HAOS is up at http://${IP}:8123 (DHCP). Onboarding can take a few minutes."
+  echo "HAOS is up at http://${IP} (DHCP). Onboarding can take a few minutes."
 else
   echo "No IP from the guest agent yet. Check the VM console in the Proxmox UI."
 fi

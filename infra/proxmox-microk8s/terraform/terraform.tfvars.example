@@ -1,5 +1,5 @@
 proxmox_endpoint  = "https://192.168.1.10:8006/"
-proxmox_api_token = "terraform@pve!tf-token=00000000-0000-0000-0000-000000000000"
+# proxmox_api_token: not here. export TF_VAR_proxmox_api_token="terraform@pve!tf-token=…" (password manager)
 proxmox_node      = "pve"
 template_vmid     = 9000
 boot_storage      = "local-zfs"

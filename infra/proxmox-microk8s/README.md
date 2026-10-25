@@ -21,7 +21,9 @@ itself is healthy.
      tailscaled is down.
    - **Terraform API token.** Only `root@pam` exists. Create
      `terraform@pve` + an API token with a role covering VM.*, Datastore.*,
-     SDN.Use and Sys.Audit, and put it in `terraform.tfvars`.
+     SDN.Use and Sys.Audit. Keep it in the password manager and pass it as
+     `TF_VAR_proxmox_api_token`, never in `terraform.tfvars` (that file is
+     copied to Nextcloud by `backup-local.sh`).
 
    Addressing: Proxmox host `.10`; servers use `.20–.63`
    (cp1–cp3 `.20–.22`, wk1–wk2 `.23–.24`).

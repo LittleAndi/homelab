@@ -191,11 +191,13 @@ This replaces the "Mirror" column of §5 for ADRs and the README.
 
 - Connect the repo to the Project (GitHub integration, `adr/` + `README.md`),
   then delete the hand-uploaded Project docs.
-- Rotate the `terraform@pve` token and update `terraform.tfvars`, or switch
-  to `TF_VAR_proxmox_api_token` only (ADR-0008).
+- ~~Rotate the `terraform@pve` token (ADR-0008).~~ Done 2026-10-25: token
+  line removed from `terraform.tfvars`, `tf` replaced by `tf2`, which comes
+  only from `TF_VAR_proxmox_api_token`.
 - ~~Create the GitHub repo, switch on secret scanning and push protection,
   first push, then make it public.~~ Done 2026-10-24.
 - ~~Choose a licence.~~ MIT, 2026-10-24.
-- Copy the local-only files into the clone, run `scripts/backup-local.sh`
-  once, then retire `NAS/adr`, `NAS/infra` and `NAS/README.md` in Nextcloud.
+- ~~Copy the local-only files into the clone, run `scripts/backup-local.sh`
+  once~~ (done 2026-10-25), then retire `NAS/adr`, `NAS/infra` and
+  `NAS/README.md` in Nextcloud.
 - ~~Mirror the redacted ADRs and README to the Project docs.~~ Done 2026-10-24.

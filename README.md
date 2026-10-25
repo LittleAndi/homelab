@@ -26,9 +26,9 @@ When a decision changes, update its **Status** and add a dated
 
 - **ADR-0014**: public since 2026-10-24 with secret scanning + push
   protection (MIT). Left: connect the repo to the Project (GitHub
-  integration) and remove the hand-uploaded docs; rotate the `terraform@pve` token; run
-  `scripts/backup-local.sh` once; retire `NAS/adr`, `NAS/infra`,
-  `NAS/README.md` in Nextcloud.
+  integration) and remove the hand-uploaded docs; retire `NAS/adr`,
+  `NAS/infra`, `NAS/README.md` in Nextcloud. (Token rotated and first
+  `backup-local.sh` run 2026-10-25.)
 - **ADR-0013**: run `infra/proxmox-microk8s/monitoring/host/20-setup-host-exporters.sh`
   on the host; pick and record the kube-prometheus-stack chart version;
   `helm install`; check all Prometheus targets are up; build the "Server
@@ -37,13 +37,12 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0012**: VM, static IP (.25), Tailscale Serve and NFS backups done
   2026-10-24. Left: store the HA backup encryption key; choose ZHA or
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
-  cables; fix `:8123` → port 80 in `infra/proxmox-ha/README.md` and script 10
-  (HA 2026.8+ serves the UI on port 80).
+  cables. (`:8123` → port 80 in the docs fixed 2026-10-25.)
 - **ADR-0011**: snapshots, HGST backup copy and SMB share are live. Left:
   Azure/rclone script from `@azure` snapshot; the first nightly syncoid run;
-  `smartd` notifications. The dump CronJob runs at 02:30 UTC
-  (`30 2 * * *`), *after* the 01:30 UTC daily snapshot: move it to
-  `0 1 * * *`.
+  `smartd` notifications; check the 2026-10-26 daily snapshot is back at
+  01:30 UTC (the DST night's ran at 02:00). Dump CronJob moved to
+  `0 1 * * *` on 2026-10-25, before the snapshot.
 - **ADR-0010**: on 35.0.2 since 2026-10-23; MariaDB tuned (512M buffer
   pool, 256M redo log). Left: recheck the buffer pool hit rate after a few
   days; pin the chart version
@@ -54,10 +53,6 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0008**: point the Azure/rclone backup at snapshots of
   `hdd-mirror/k8s` (designed in ADR-0011). Snapshots and a local copy exist
   since 2026-09-26; there is still no off-site copy.
-- **ADR-0008 (security, found 2026-10-22)**: `infra/proxmox-microk8s/terraform/terraform.tfvars`
-  holds the real `proxmox_api_token`, although the token should come from
-  `TF_VAR_proxmox_api_token` (the folder syncs to Nextcloud). Remove the line
-  and rotate the `terraform@pve` token.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; roles
   for the Seagate 1TB and Samsung 512GB SSD; 6TB purchase; GPU use. Disk

@@ -346,10 +346,11 @@ still can't run (known, see the 2026-09-26 update).
   by snapshots).
 - Pin the chart version (e.g. a comment in `values.yaml` and the runbook's
   upgrade note), and add the pull-policy lesson to the runbook.
-- `mariadb-dump-cronjob.yaml` runs at `30 2 * * *` (02:30 UTC), after
+- ~~`mariadb-dump-cronjob.yaml` runs at `30 2 * * *` (02:30 UTC), after
   Sanoid's 01:30 UTC daily snapshot, so each daily snapshot holds the
   previous night's dump. Move the CronJob to `0 1 * * *` (ADR-0011 assumes
-  01:00 UTC).
+  01:00 UTC).~~ Done 2026-10-25: `0 1 * * *` applied; the cluster runs in
+  UTC (last run fired at 02:30Z), so no DST drift.
 - ~~Follow-up ADR for observability~~ Done: ADR-0013 (2026-10-24).
 - Optional Redis/Valkey.
 - `migration-runbook.md` Part A: make any operator re-install keep

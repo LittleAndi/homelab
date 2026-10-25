@@ -191,8 +191,27 @@ Fixes found during deployment (all in the scripts/playbook now):
   only sees allocated RAM. Real usage: `free -h` in the guest or
   `kubectl top nodes`.
 
+## Update 2026-10-25: API token out of `terraform.tfvars`
+
+The 2026-09-21 note above says the token came from
+`TF_VAR_proxmox_api_token`, but `terraform.tfvars` still held it (found
+2026-10-22). The line was removed from the local file on 2026-10-25, the
+`.example` and the setup README now point to the environment variable. The
+old token has been in a file that syncs to Nextcloud (and in
+`LOCAL_BACKUP_DIR` copies), so it is rotated rather than just moved.
+
+Rotated the same day: new token `tf2` (`privsep 0`, so it inherits the
+user's `TerraformProv` role), `terraform plan` showed no changes, then `tf`
+was removed. The secret is in the password manager and is read into
+`TF_VAR_proxmox_api_token` per shell. Note for bash: the `!` in
+`terraform@pve!tf2=…` must be in single quotes, or history expansion
+rejects the line.
+
 ## Open items
 
+- ~~Rotate the `terraform@pve` token: new token into the password manager,
+  delete the old one, `terraform plan` shows no changes.~~ Done 2026-10-25
+  (`tf` → `tf2`).
 - ~~Confirm this ADR (Proposed → Accepted) and mark ADR-0004/0006 Superseded.~~
   Done 2026-09-21.
 - ~~`scripts/03-setup-nfs-provisioner.sh` has `NFS_SERVER="192.168.1.1"`~~

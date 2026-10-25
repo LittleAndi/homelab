@@ -133,8 +133,8 @@ services and doesn't apply.
 - ~~Run scripts 10 and 11; set the static IP; add the NFS backup location.~~
   Done 2026-10-24.
 - Store the HA backup encryption key in the password manager.
-- Fix `:8123` → port 80 in `infra/proxmox-ha/README.md` and in script 10's
-  final output.
+- ~~Fix `:8123` → port 80 in `infra/proxmox-ha/README.md` and in script 10's
+  final output.~~ Done 2026-10-25.
 - Choose ZHA or Zigbee2MQTT. With ZHA, 2 GB RAM would do.
 - Z-Stick: NVM backup, firmware 1.2 check.
 - Short USB extension cables for both sticks.

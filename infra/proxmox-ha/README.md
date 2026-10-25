@@ -24,7 +24,7 @@ needs `root@pam`; HAOS manages itself after creation).
    CH340 device is plugged in (then pass the Zi-Stick by port,
    `usb1: host=7-1.3`). Prints the first-boot DHCP address.
 
-2. **In the browser** — onboarding at `http://<dhcp-ip>:8123`, then
+2. **In the browser** — onboarding at `http://<dhcp-ip>` (port 80; HA 2026.8+ no longer uses `:8123`), then
    *Settings > System > Network*: IPv4 static `192.168.1.25/24`, gateway and
    DNS `192.168.1.1`. Reconnect on `.25`.
 

@@ -302,8 +302,11 @@ Tailscale too.
   incremental carried the 20:00/21:00 UTC hourlies over. mbuffer's
   "HOME environment variable not set" warning is harmless; optionally add
   `Environment=HOME=/root` to the service.)
-- Verify the `mariadb-dump` schedule is 01:00 UTC
-  (`kubectl -n nextcloud get cronjob`).
+- ~~Verify the `mariadb-dump` schedule is 01:00 UTC
+  (`kubectl -n nextcloud get cronjob`).~~ Done 2026-10-25 (it was 02:30;
+  moved to `0 1 * * *`, see ADR-0010).
+- The 2026-10-25 daily snapshot was taken at 02:00 UTC instead of 01:30
+  (the night DST ended). Check that 2026-10-26 is back at 01:30 UTC.
 - After a day, confirm Load_Cycle_Count barely moves (was 301,169).
 - Make sure `smartd` is running with notifications for all disks.
 - §3: write the Azure/rclone script and timer under `infra/`. Until it runs,
