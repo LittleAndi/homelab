@@ -358,8 +358,9 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - Make sure `smartd` is running with notifications for all disks. (Running
   2026-10-25, but `-m root` mails go nowhere: pick a notification channel.
   The Azure sync has no failure notification either.)
-- Store `rclone.conf` (crypt `password`/`password2`) in the password
-  manager, so an Azure restore doesn't depend on this house.
+- ~~Store `rclone.conf` (crypt `password`/`password2`) in the password
+  manager, so an Azure restore doesn't depend on this house.~~ Done
+  2026-10-26.
 - §3: ~~create the storage account, container, policy and SAS; create the
   two rclone remotes; run `04-setup-azure-sync.sh`~~ (done 2026-10-25,
   dry run: 207 GiB, 221k files); record the account's region here; the
