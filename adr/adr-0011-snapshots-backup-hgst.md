@@ -311,7 +311,8 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
   DB dumps and `stockstalker-postgres-backups`), minus Nextcloud's preview
   cache (`appdata_*/preview`, ~36G, regenerable).
 - **Target: a new storage account**, `{offsite-azure-account}` in resource
-  group `pve` (Standard LRS, Cool tier, no public access, TLS 1.2), with one
+  group `pve` in `swedencentral` (Standard LRS, Cool tier, no public access,
+  TLS 1.2, no hierarchical namespace; verified 2026-10-26), with one
   private container `{offsite-azure-container}`. The old account was set up
   for the migration and still holds the old data; keeping the backup apart
   means its own SAS, its own crypt passwords and a clean bill. LRS because
@@ -363,8 +364,8 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
   2026-10-26.
 - §3: ~~create the storage account, container, policy and SAS; create the
   two rclone remotes; run `04-setup-azure-sync.sh`~~ (done 2026-10-25,
-  dry run: 207 GiB, 221k files); record the account's region here; the
-  first upload; confirm the 03:00 UTC run the next night. Until it runs,
+  dry run: 207 GiB, 221k files); first upload started 2026-10-26; confirm
+  it finished and that the next 03:00 UTC run is incremental. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
 - Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
