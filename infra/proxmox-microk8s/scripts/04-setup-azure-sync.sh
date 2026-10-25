@@ -68,7 +68,7 @@ rclone sync $DRY "$SRC/" "$DEST" \
   --backup-dir "$DELETED/$TODAY" \
   --exclude '/*/data/appdata_*/preview/**' \
   --transfers 8 --checkers 16 --fast-list \
-  --stats 15m --stats-one-line --log-level NOTICE
+  --stats 15m --stats-one-line --stats-log-level NOTICE --log-level NOTICE
 
 # Purge deleted/changed-file folders older than KEEP_DAYS.
 CUTOFF="$(date -u -d "-$KEEP_DAYS days" +%F)"
