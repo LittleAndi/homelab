@@ -94,7 +94,7 @@ output ends in `\r`, which rclone rejects.
    to the screen or shell history:
    ```bash
    cd ~/src/homelab && . ./site.env
-   RG=pve LOC=<region> ACCT=$AZURE_OFFSITE_ACCOUNT CONT=$AZURE_OFFSITE_CONTAINER
+   RG=pve LOC=swedencentral ACCT=$AZURE_OFFSITE_ACCOUNT CONT=$AZURE_OFFSITE_CONTAINER
    az group show -n $RG -o none 2>/dev/null || az group create -n $RG -l $LOC -o none
    az storage account create -n $ACCT -g $RG -l $LOC \
      --sku Standard_LRS --kind StorageV2 --access-tier Cool \
