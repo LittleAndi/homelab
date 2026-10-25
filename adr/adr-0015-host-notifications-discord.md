@@ -91,6 +91,22 @@ replace it). It ends by sending a test notification.
 - Re-running `05-setup-notifications.sh` sends a test notification each
   time.
 
+## Update 2026-10-26: colours, and unit results as real notifications
+
+- The embed's colour bar shows what happened: **green** success
+  (`fields.result=ok`), **red** `error`, **yellow** `warning` and
+  forwarded mail (`unknown`: smartd and zed, which mostly report
+  problems), **blue** `info`/`notice` (backup jobs, package updates, the
+  test). Chosen in the target's body template with `{{#if (eq …)}}`.
+- `notify-unit` no longer mails root. It calls `PVE::Notify::notify` with
+  severity `error` (failed) or `info` (succeeded) and the fields
+  `type=unit-result`, `unit`, `result=ok|failed`, using a custom template
+  `unit-result` in `/etc/pve/notification-templates/default/`. That gives
+  a real severity instead of `unknown`, and matchers could filter on the
+  fields later. The webhook body still only uses `title`, `message`,
+  `severity` and `fields.result`.
+- smartd and zed are unchanged: mail to root → `proxmox-mail-forward`.
+
 ## Open items
 
 - ~~Decide on `default-matcher` → `mail-to-root`: it can't deliver (port 25

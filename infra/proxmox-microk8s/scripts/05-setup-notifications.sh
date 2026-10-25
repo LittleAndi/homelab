@@ -8,8 +8,8 @@
 #     https://, so it can't be a secret by itself. To replace it: --reset-url.
 #   - Matcher "to-discord": every notification goes there, including mail to
 #     root that proxmox-mail-forward turns into notifications (smartd, zed).
-#   - notify-failure@.service: mails root when a backup unit fails, so those
-#     reach Discord the same way (OnFailure= drop-ins below).
+#   - notify-failure@.service: a Proxmox notification (severity error) when a
+#     backup unit fails (OnFailure= drop-ins below).
 #   - notify-success@.service: the same for a successful run, only for the
 #     daily Azure sync (OnSuccess=; the hourly units would flood the channel).
 #     A missing morning message means the sync didn't run.
@@ -28,8 +28,11 @@ grep -q proxmox-mail-forward /root/.forward 2>/dev/null \
   || die "/root/.forward doesn't pipe to proxmox-mail-forward: root mail won't become notifications."
 
 # Discord embed: description holds up to 4096 characters (plain content: 2000).
+# The colour bar: green for fields.result=ok (notify-unit), red for error,
+# yellow for warning and for forwarded mail (unknown: smartd, zed), blue for
+# info/notice.
 URL_BASE='https://discord.com/api/webhooks/'
-BODY='{"username":"pve","embeds":[{"title":"[{{ severity }}] {{ escape title }}","description":"{{ escape message }}"}]}'
+BODY='{"username":"pve","embeds":[{"title":"[{{ severity }}] {{ escape title }}","description":"{{ escape message }}","color":{{#if (eq fields.result "ok")}}5763719{{else if (eq severity "error")}}15548997{{else if (eq severity "warning")}}16705372{{else if (eq severity "unknown")}}16705372{{else}}3447003{{/if}}}]}'
 
 # --- Webhook target -------------------------------------------------------------
 if pvesh get "/cluster/notifications/endpoints/webhook/$TARGET" >/dev/null 2>&1 && [ "${1:-}" != "--reset-url" ]; then
@@ -67,8 +70,9 @@ fi
 cat > /usr/local/sbin/notify-unit <<'SCRIPT'
 #!/bin/bash
 # Managed by proxmox-microk8s/scripts/05-setup-notifications.sh (ADR-0015).
-# notify-unit <unit> failed|succeeded: mails root about a finished unit;
-# proxmox-mail-forward passes it on to Discord.
+# notify-unit <unit> failed|succeeded: sends a Proxmox notification
+# (template unit-result) with severity error or info; result=ok|failed in the
+# fields picks the colour in the Discord target.
 unit="$1" result="${2:-failed}"
 inv="$(systemctl show -p InvocationID --value "$unit")"
 start="$(systemctl show -p ExecMainStartTimestampMonotonic --value "$unit")"
@@ -78,18 +82,29 @@ if [ "${start:-0}" -gt 0 ] && [ "${stop:-0}" -gt "$start" ]; then
   s=$(( (stop - start) / 1000000 ))
   took=" after $((s / 3600))h$(( s % 3600 / 60 ))m$((s % 60))s"
 fi
-{
-  echo "Subject: ${unit%.service} ${result} on $(hostname)${took}"
-  echo
-  if [ "$result" = succeeded ] && [ -n "$inv" ]; then
-    # This run's own output only, without systemd's start/stop lines.
-    journalctl -q --no-pager -o cat "_SYSTEMD_INVOCATION_ID=$inv" _TRANSPORT=stdout \
-      | tail -n 8 | cut -c1-200
-  else
-    systemctl status --no-pager --lines=25 "$unit" 2>&1 | cut -c1-200
-  fi
-} | /usr/sbin/sendmail root
+if [ "$result" = succeeded ] && [ -n "$inv" ]; then
+  # This run's own output only, without systemd's start/stop lines.
+  details="$(journalctl -q --no-pager -o cat "_SYSTEMD_INVOCATION_ID=$inv" _TRANSPORT=stdout \
+    | tail -n 8 | cut -c1-200)"
+  severity=info ok=ok
+else
+  details="$(systemctl status --no-pager --lines=25 "$unit" 2>&1 | cut -c1-200)"
+  severity=error ok=failed
+fi
+UNIT="${unit%.service}" RESULT="$result" HOST="$(hostname)" TOOK="$took" \
+DETAILS="$details" SEVERITY="$severity" OK="$ok" perl -MPVE::Notify -e '
+  PVE::Notify::notify($ENV{SEVERITY}, "unit-result",
+    { unit => $ENV{UNIT}, result => $ENV{RESULT}, hostname => $ENV{HOST},
+      took => $ENV{TOOK}, details => $ENV{DETAILS} },
+    { type => "unit-result", unit => $ENV{UNIT}, result => $ENV{OK} });'
 SCRIPT
+
+# Template for notify-unit (Proxmox looks for custom ones here).
+TPL=/etc/pve/notification-templates/default
+mkdir -p "$TPL"
+printf '%s' '{{ unit }} {{ result }} on {{ hostname }}{{ took }}' > "$TPL/unit-result-subject.txt.hbs"
+printf '%s\n' '{{ details }}' > "$TPL/unit-result-body.txt.hbs"
+printf '%s\n' '<pre>{{ details }}</pre>' > "$TPL/unit-result-body.html.hbs"
 chmod 0755 /usr/local/sbin/notify-unit
 rm -f /usr/local/sbin/notify-failure   # replaced by notify-unit
 
