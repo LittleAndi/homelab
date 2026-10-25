@@ -293,6 +293,51 @@ Tailscale too.
   bottleneck above ~750 Mbit/s, so on this line future large pulls are
   network-bound.
 
+## Update 2026-10-25: §3 design for the Azure sync
+
+Script: `infra/proxmox-microk8s/scripts/04-setup-azure-sync.sh` (run the
+rendered copy on the host). It installs `/usr/local/sbin/azure-sync-k8s`
+and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
+
+- **Source: the newest Sanoid daily snapshot, not `@azure`.** syncoid 2.2.0
+  replicates every snapshot and can't exclude one. A daily-recreated
+  `@azure` would land on `hgst/backup/k8s`, and the next day's would clash
+  with it there and break the hourly replication. The 01:30 UTC daily is
+  just as crash-consistent and already holds the 01:00 UTC dump. The script
+  `zfs hold`s it while rclone reads it and refuses a daily older than 26 h.
+- **Scope:** all of `hdd-mirror/k8s` (every PVC directory, including the
+  DB dumps and `stockstalker-postgres-backups`), minus Nextcloud's preview
+  cache (`appdata_*/preview`, ~36G, regenerable).
+- **Target: a new storage account**, `{offsite-azure-account}` in resource
+  group `pve` (Standard LRS, Cool tier, no public access, TLS 1.2), with one
+  private container `{offsite-azure-container}`. The old account was set up
+  for the migration and still holds the old data; keeping the backup apart
+  means its own SAS, its own crypt passwords and a clean bill. LRS because
+  the copy is already off-site; Cool because it's written nightly and
+  rarely read (its 30-day minimum matches the 30 days below).
+- **rclone:** `{offsite-azure-remote}:` (azureblob, container SAS) and
+  `{offsite-crypt-remote}:` (crypt over `{offsite-azure-remote}:{offsite-azure-container}`,
+  new generated passwords). The old `{azure-remote}:`/`{crypt-remote}:` stay
+  for the old container. Data goes to `{offsite-crypt-remote}:k8s/`.
+  `rclone sync` with `--backup-dir {offsite-crypt-remote}:k8s-deleted/<date>`:
+  files deleted or changed at home move there instead of vanishing, so a
+  local mistake or ransomware doesn't wipe the off-site copy the same night.
+  Folders older than **30 days** are purged by the script.
+- **Credentials:** a container SAS tied to a **stored access policy**
+  (read, add, create, write, delete, list; 1-year expiry). Revoking it means
+  deleting the policy, without rotating account keys. The old ad-hoc SAS
+  expired 2026-09-28. Renew before the policy expires: edit the policy's
+  expiry (`az storage container policy update … --expiry`; the SAS URL
+  keeps working) or create a new policy and run
+  `rclone config update {offsite-azure-remote} sas_url '…'` on the host.
+- **Restore** (from any machine with `rclone.conf`):
+  `rclone copy {offsite-crypt-remote}:k8s/<pvc-dir>/ <target>/`; an older
+  version of a file is in `{offsite-crypt-remote}:k8s-deleted/<date>/`. Without the crypt
+  passwords the copy is unreadable, so `rclone.conf` must also be stored
+  outside this house (password manager).
+- **Not covered:** MariaDB's own volume and Nextcloud's app volume
+  (`local-path` on a node, ADR-0010); the DB is covered through the dumps.
+
 ## Open items
 
 - Confirm `daily_hour = 1` is in `/etc/sanoid/sanoid.conf`.
@@ -308,8 +353,15 @@ Tailscale too.
 - The 2026-10-25 daily snapshot was taken at 02:00 UTC instead of 01:30
   (the night DST ended). Check that 2026-10-26 is back at 01:30 UTC.
 - After a day, confirm Load_Cycle_Count barely moves (was 301,169).
-- Make sure `smartd` is running with notifications for all disks.
-- §3: write the Azure/rclone script and timer under `infra/`. Until it runs,
+- Make sure `smartd` is running with notifications for all disks. (Running
+  2026-10-25, but `-m root` mails go nowhere: pick a notification channel.
+  The Azure sync has no failure notification either.)
+- Store `rclone.conf` (crypt `password`/`password2`) in the password
+  manager, so an Azure restore doesn't depend on this house.
+- §3: create the storage account, container, policy and SAS; create the
+  two rclone remotes; run `04-setup-azure-sync.sh`,
+  a `DRY_RUN=1` check, then the first upload; confirm the 03:00 UTC run the
+  next night. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
 - Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied

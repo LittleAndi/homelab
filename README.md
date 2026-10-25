@@ -39,10 +39,14 @@ When a decision changes, update its **Status** and add a dated
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
   cables. (`:8123` → port 80 in the docs fixed 2026-10-25.)
 - **ADR-0011**: snapshots, HGST backup copy and SMB share are live. Left:
-  Azure/rclone script from `@azure` snapshot; the first nightly syncoid run;
-  `smartd` notifications; check the 2026-10-26 daily snapshot is back at
-  01:30 UTC (the DST night's ran at 02:00). Dump CronJob moved to
-  `0 1 * * *` on 2026-10-25, before the snapshot.
+  Azure sync: script written 2026-10-25 (`scripts/04-setup-azure-sync.sh`,
+  newest daily snapshot → new storage account, crypt `k8s/`, 30 d of
+  deleted files), needs the account + SAS + rclone remotes, then the first
+  upload; store `rclone.conf` in the password manager;
+  `smartd` notifications (mails to root go nowhere); check the 2026-10-26
+  daily snapshot is back at 01:30 UTC (the DST night's ran at 02:00). Dump
+  CronJob moved to `0 1 * * *` on 2026-10-25; syncoid runs hourly without
+  errors.
 - **ADR-0010**: on 35.0.2 since 2026-10-23; MariaDB tuned (512M buffer
   pool, 256M redo log). Left: recheck the buffer pool hit rate after a few
   days; pin the chart version
