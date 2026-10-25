@@ -1,6 +1,6 @@
 # ADR-0015: Host Notifications to Discord through the Proxmox Notification System
 
-**Status:** Accepted 2026-10-26 — deployed 2026-10-26
+**Status:** Accepted 2026-10-26 — deployed 2026-10-26; Discord is the only channel
 **Date:** 2026-10-26
 
 ## Context
@@ -78,6 +78,9 @@ replace it). It ends by sending a test notification.
 
 ## Open items
 
-- Decide on `default-matcher` → `mail-to-root`: it can't deliver (port 25
+- ~~Decide on `default-matcher` → `mail-to-root`: it can't deliver (port 25
   blocked), so each notification leaves a deferred mail for 5 days.
-  Disable it, or give it an SMTP target.
+  Disable it, or give it an SMTP target.~~ Disabled 2026-10-26
+  (`pvesh set /cluster/notifications/matchers/default-matcher --disable 1`;
+  `--disable 0` to undo), stuck test mail deleted. An SMTP target remains
+  an option (see Alternatives).
