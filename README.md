@@ -41,8 +41,8 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0011**: snapshots, HGST backup copy and SMB share are live. Left:
   Azure sync: script written 2026-10-25 (`scripts/04-setup-azure-sync.sh`,
   newest daily snapshot → new storage account, crypt `k8s/`, 30 d of
-  deleted files), needs the account + SAS + rclone remotes, then the first
-  upload (`rclone.conf` is in the password manager since 2026-10-26);
+  deleted files), account, SAS and remotes set up, first upload started
+  2026-10-26 (`rclone.conf` is in the password manager since 2026-10-26);
   `smartd` notifications (mails to root go nowhere); check the 2026-10-26
   daily snapshot is back at 01:30 UTC (the DST night's ran at 02:00). Dump
   CronJob moved to `0 1 * * *` on 2026-10-25; syncoid runs hourly without
