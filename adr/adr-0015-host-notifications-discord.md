@@ -106,6 +106,8 @@ replace it). It ends by sending a test notification.
   fields later. The webhook body still only uses `title`, `message`,
   `severity` and `fields.result`.
 - smartd and zed are unchanged: mail to root → `proxmox-mail-forward`.
+- Verified 2026-10-26: one test per colour, plus a real failure (red) and
+  success (green) through `notify-unit`, all shown as expected in Discord.
 
 ## Open items
 
