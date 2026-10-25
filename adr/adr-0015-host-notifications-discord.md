@@ -76,6 +76,21 @@ replace it). It ends by sending a test notification.
   (`notify-failure@pipeline-test`) through Postfix → `proxmox-mail-forward`
   → Discord.
 
+## Update 2026-10-26: success message for the daily Azure sync
+
+- `azure-sync-k8s` also notifies on success (`OnSuccess=` →
+  `notify-success@.service`), once a day. The point is the morning
+  message: if it's missing, the sync didn't run, even when nothing failed.
+- Only that unit. syncoid (hourly) and sanoid (every 15 min) report
+  failures only; their successes would bury everything else.
+- `notify-failure` became `/usr/local/sbin/notify-unit <unit>
+  failed|succeeded`, used by both `notify-failure@` and `notify-success@`.
+  The subject carries the run time (`… succeeded on pve after 2h1m5s`); a
+  success body is the run's last 8 output lines (`_TRANSPORT=stdout` of
+  that invocation), a failure body the `systemctl status`.
+- Re-running `05-setup-notifications.sh` sends a test notification each
+  time.
+
 ## Open items
 
 - ~~Decide on `default-matcher` → `mail-to-root`: it can't deliver (port 25

@@ -10,11 +10,15 @@
 #     root that proxmox-mail-forward turns into notifications (smartd, zed).
 #   - notify-failure@.service: mails root when a backup unit fails, so those
 #     reach Discord the same way (OnFailure= drop-ins below).
+#   - notify-success@.service: the same for a successful run, only for the
+#     daily Azure sync (OnSuccess=; the hourly units would flood the channel).
+#     A missing morning message means the sync didn't run.
 set -euo pipefail
 
 TARGET="discord"
 MATCHER="to-discord"
 UNITS="azure-sync-k8s syncoid-k8s syncoid-ha-backups sanoid"
+SUCCESS_UNITS="azure-sync-k8s"
 
 die() { echo "$*" >&2; exit 1; }
 b64() { printf '%s' "$1" | base64 -w0; }
@@ -59,38 +63,58 @@ else
     --mode all --comment "All notifications to Discord (ADR-0015)"
 fi
 
-# --- Failure notifications for backup units ----------------------------------------
-cat > /usr/local/sbin/notify-failure <<'SCRIPT'
+# --- Failure / success notifications for backup units ---------------------------
+cat > /usr/local/sbin/notify-unit <<'SCRIPT'
 #!/bin/bash
 # Managed by proxmox-microk8s/scripts/05-setup-notifications.sh (ADR-0015).
-# Mails root about a failed unit; proxmox-mail-forward passes it on to Discord.
-unit="$1"
+# notify-unit <unit> failed|succeeded: mails root about a finished unit;
+# proxmox-mail-forward passes it on to Discord.
+unit="$1" result="${2:-failed}"
+inv="$(systemctl show -p InvocationID --value "$unit")"
+start="$(systemctl show -p ExecMainStartTimestampMonotonic --value "$unit")"
+stop="$(systemctl show -p ExecMainExitTimestampMonotonic --value "$unit")"
+took=""
+if [ "${start:-0}" -gt 0 ] && [ "${stop:-0}" -gt "$start" ]; then
+  s=$(( (stop - start) / 1000000 ))
+  took=" after $((s / 3600))h$(( s % 3600 / 60 ))m$((s % 60))s"
+fi
 {
-  echo "Subject: $unit failed on $(hostname)"
+  echo "Subject: ${unit%.service} ${result} on $(hostname)${took}"
   echo
-  systemctl status --no-pager --lines=25 "$unit" 2>&1 | cut -c1-200
+  if [ "$result" = succeeded ] && [ -n "$inv" ]; then
+    # This run's own output only, without systemd's start/stop lines.
+    journalctl -q --no-pager -o cat "_SYSTEMD_INVOCATION_ID=$inv" _TRANSPORT=stdout \
+      | tail -n 8 | cut -c1-200
+  else
+    systemctl status --no-pager --lines=25 "$unit" 2>&1 | cut -c1-200
+  fi
 } | /usr/sbin/sendmail root
 SCRIPT
-chmod 0755 /usr/local/sbin/notify-failure
+chmod 0755 /usr/local/sbin/notify-unit
+rm -f /usr/local/sbin/notify-failure   # replaced by notify-unit
 
-cat > /etc/systemd/system/notify-failure@.service <<'UNIT'
+for r in failure success; do
+  [ "$r" = failure ] && word=failed || word=succeeded
+  cat > "/etc/systemd/system/notify-$r@.service" <<UNIT
 [Unit]
-Description=Notify about failed %i (ADR-0015)
+Description=Notify that %i ${word} (ADR-0015)
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/sbin/notify-failure %i
+ExecStart=/usr/local/sbin/notify-unit %i ${word}
 UNIT
+done
 
 for u in $UNITS; do
   systemctl cat "$u.service" >/dev/null 2>&1 || { echo "skip $u.service (not installed)"; continue; }
   mkdir -p "/etc/systemd/system/$u.service.d"
-  cat > "/etc/systemd/system/$u.service.d/notify-failure.conf" <<'UNIT'
-# Managed by 05-setup-notifications.sh (ADR-0015)
-[Unit]
-OnFailure=notify-failure@%n.service
-UNIT
-  echo "OnFailure set for $u.service"
+  {
+    echo "# Managed by 05-setup-notifications.sh (ADR-0015)"
+    echo "[Unit]"
+    echo "OnFailure=notify-failure@%n.service"
+    if [[ " $SUCCESS_UNITS " == *" $u "* ]]; then echo "OnSuccess=notify-success@%n.service"; fi
+  } > "/etc/systemd/system/$u.service.d/notify-failure.conf"
+  echo "Notifications set for $u.service$([[ " $SUCCESS_UNITS " == *" $u "* ]] && echo " (failure + success)")"
 done
 systemctl daemon-reload
 
