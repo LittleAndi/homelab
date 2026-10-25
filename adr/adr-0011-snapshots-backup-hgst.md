@@ -296,7 +296,9 @@ Tailscale too.
 ## Update 2026-10-25: §3 design for the Azure sync
 
 Script: `infra/proxmox-microk8s/scripts/04-setup-azure-sync.sh` (run the
-rendered copy on the host). It installs `/usr/local/sbin/azure-sync-k8s`
+rendered copy on the host). Setup steps for the storage account, SAS and
+rclone remotes: `infra/proxmox-microk8s/README.md`, "Off-site backup to
+Azure". It installs `/usr/local/sbin/azure-sync-k8s`
 and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 
 - **Source: the newest Sanoid daily snapshot, not `@azure`.** syncoid 2.2.0
@@ -358,10 +360,10 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
   The Azure sync has no failure notification either.)
 - Store `rclone.conf` (crypt `password`/`password2`) in the password
   manager, so an Azure restore doesn't depend on this house.
-- §3: create the storage account, container, policy and SAS; create the
-  two rclone remotes; run `04-setup-azure-sync.sh`,
-  a `DRY_RUN=1` check, then the first upload; confirm the 03:00 UTC run the
-  next night. Until it runs,
+- §3: ~~create the storage account, container, policy and SAS; create the
+  two rclone remotes; run `04-setup-azure-sync.sh`~~ (done 2026-10-25,
+  dry run: 207 GiB, 221k files); record the account's region here; the
+  first upload; confirm the 03:00 UTC run the next night. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
 - Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
