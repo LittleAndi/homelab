@@ -356,9 +356,9 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - The 2026-10-25 daily snapshot was taken at 02:00 UTC instead of 01:30
   (the night DST ended). Check that 2026-10-26 is back at 01:30 UTC.
 - After a day, confirm Load_Cycle_Count barely moves (was 301,169).
-- Make sure `smartd` is running with notifications for all disks. (Running
-  2026-10-25, but `-m root` mails go nowhere: pick a notification channel.
-  The Azure sync has no failure notification either.)
+- ~~Make sure `smartd` is running with notifications for all disks.~~
+  Done 2026-10-26: smartd, zed and failures of the Azure sync, syncoid and
+  sanoid units go to Discord (ADR-0015).
 - ~~Store `rclone.conf` (crypt `password`/`password2`) in the password
   manager, so an Azure restore doesn't depend on this house.~~ Done
   2026-10-26.

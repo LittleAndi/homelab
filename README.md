@@ -21,9 +21,13 @@ When a decision changes, update its **Status** and add a dated
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
 | [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted 2026-10-24 — not deployed yet |
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
+| [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26 |
 
 ## Open items
 
+- **ADR-0015**: Discord notifications live 2026-10-26 (smartd, zed, failed
+  backup units, Proxmox jobs). Left: disable `default-matcher` or give it
+  an SMTP target (it can't deliver: port 25 blocked).
 - **ADR-0014**: public since 2026-10-24 with secret scanning + push
   protection (MIT). Left: connect the repo to the Project (GitHub
   integration) and remove the hand-uploaded docs; retire `NAS/adr`,
@@ -43,7 +47,7 @@ When a decision changes, update its **Status** and add a dated
   newest daily snapshot → new storage account, crypt `k8s/`, 30 d of
   deleted files), account, SAS and remotes set up, first upload started
   2026-10-26 (`rclone.conf` is in the password manager since 2026-10-26);
-  `smartd` notifications (mails to root go nowhere); check the 2026-10-26
+  `smartd` notifications via Discord since 2026-10-26 (ADR-0015); check the 2026-10-26
   daily snapshot is back at 01:30 UTC (the DST night's ran at 02:00). Dump
   CronJob moved to `0 1 * * *` on 2026-10-25; syncoid runs hourly without
   errors.
