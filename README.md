@@ -55,6 +55,9 @@ When a decision changes, update its **Status** and add a dated
   before major upgrades (the app volume isn't snapshotted); decommission
   the Podman stack on `{workstation}` (unblocked: Azure sync runs since 2026-10-26);
   optional Redis/Valkey. (Observability follow-up: ADR-0013.)
+- **ADR-0008 (host updates, found 2026-10-26)**: 39 packages pending on
+  the host, 27 security. Maintenance window: `apt full-upgrade`, reboot if
+  needed (ask first), check cluster/HA/timers afterwards.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; roles
   for the Seagate 1TB and Samsung 512GB SSD; 6TB purchase; GPU use. Disk

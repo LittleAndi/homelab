@@ -229,5 +229,9 @@ rejects the line.
 - ~~Point the Azure/rclone backup at snapshots of `hdd-mirror/k8s`
   (`.zfs/snapshot/…`); not set up yet.~~ Done 2026-10-26: nightly sync of
   the newest daily snapshot to its own storage account (ADR-0011 §3).
+- Host updates (found 2026-10-26): 39 packages pending, 27 of them from
+  `stable-security`. Plan a maintenance window: `apt full-upgrade` on the
+  host, reboot if the kernel or `pve-*` changed (needs an OK; the VMs and
+  the cluster go down with it), then check the cluster, HA and the timers.
 - Role of the 1TB HDD(s) and the planned 6TB drive(s) under this design (see ADR-0009).
   Live host shows one 1 TB HGST (`sdc`, blank) and a 512 GB Samsung SSD with NTFS (`sdd`).
