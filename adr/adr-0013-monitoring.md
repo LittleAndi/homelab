@@ -1,6 +1,6 @@
 # ADR-0013: Monitoring — kube-prometheus-stack in the Cluster, Exporters on the Host
 
-**Status:** Accepted 2026-10-24 — host exporters deployed 2026-10-26; chart not installed yet
+**Status:** Accepted 2026-10-24 — deployed 2026-10-26 (chart 92.13.1); custom dashboard not built yet
 **Date:** 2026-10-24
 
 ## Context
@@ -169,13 +169,35 @@ These are installed by `infra/proxmox-microk8s/monitoring/host/20-setup-host-exp
 - Backports stays at priority 100: none of the host's upgradable packages
   come from it.
 
+## Update 2026-10-26: chart installed
+
+- `kube-prometheus-stack` **92.13.1** (app v0.94.1), the newest at
+  install. Before installing, every key in `values.yaml` was checked
+  against the chart's own values, and `helm template` was reviewed (no
+  Alertmanager, no chart-generated Grafana admin Secret).
+- **Fixed before install:** the Prometheus affinity said `wk2`, but the
+  node is `microk8s-wk2` (`kubernetes.io/hostname`). Prometheus now runs
+  on wk2 as intended. Grafana landed on cp2 (`local-path` pins it there).
+- **All 32 targets up**, including `pve`, `pve-node` and `pve-smartctl`,
+  which confirms the SNAT-to-node-IP path through the host firewall.
+  Data checked: pool capacity for all 3 pools, current temperature for all
+  6 drives, snapshot age, guest status, systemd units (incl.
+  `azure-sync-k8s`).
+- Grafana answers at `https://grafana.{tailnet}.ts.net` (first request
+  ~10 s while Tailscale issued the certificate). The Grafana.com dashboards
+  downloaded and provisioned.
+- The Prometheus image has no shell tools; query it through the API server
+  proxy:
+  `kubectl get --raw '/api/v1/namespaces/monitoring/services/kube-prometheus-stack-prometheus:http-web/proxy/api/v1/targets'`.
+
 ## Open items
 
 - ~~Run script 20 on the host. Verify the three ports from cp1, and that
   another LAN machine is refused.~~ Done 2026-10-26.
-- Pick the chart version, record it in the runbook, and run `helm install`.
-- Check that all targets are up in Prometheus (`/targets`), especially the
-  `pve-*` jobs.
+- ~~Pick the chart version, record it in the runbook, and run `helm install`.~~
+  Done 2026-10-26 (92.13.1).
+- ~~Check that all targets are up in Prometheus (`/targets`), especially the
+  `pve-*` jobs.~~ Done 2026-10-26: 32/32 up.
 - Build the "Server overview" dashboard and export it to
   `infra/proxmox-microk8s/monitoring/dashboards/` as a ConfigMap.
 - Pin the Grafana.com dashboard revisions in `values.yaml` (currently
