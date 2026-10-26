@@ -1,6 +1,6 @@
 # ADR-0011: ZFS Snapshots, Local Backup Pool on the HGST, and Bulk Data
 
-**Status:** Accepted 2026-09-26 — §1, §2 and §4 implemented 2026-09-26; bulk data moved in 2026-09-27; §3 (Azure) pending
+**Status:** Accepted 2026-09-26 — §1, §2 and §4 implemented 2026-09-26; bulk data moved in 2026-09-27; §3 (Azure) implemented 2026-10-26
 **Date:** 2026-09-26
 
 > The Decision section is the plan as accepted. The dated Update below records
@@ -341,6 +341,19 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - **Not covered:** MariaDB's own volume and Nextcloud's app volume
   (`local-path` on a node, ADR-0010); the DB is covered through the dumps.
 
+## Update 2026-10-26: first off-site upload done (§3)
+
+- First run 00:18–02:22 CET (2 h 5 min, ~260–290 Mbit/s up, 1.4G memory
+  peak), from `autosnap_2026-10-25_02:00:00_daily`. Result: success; the
+  `OnSuccess=` notification fired (ADR-0015).
+- Azure matches the source exactly: **221,443 objects, 207.119 GiB**
+  (`rclone size` on `{offsite-crypt-remote}:k8s` and on the snapshot minus
+  previews). Hold released; nothing in `k8s-deleted/` yet.
+- Restore test: the newest DB dump (349M) copied back from Azure decrypted
+  with a matching sha256.
+- Progress lines were missing from the log: rclone logs stats at INFO.
+  Fixed with `--stats-log-level NOTICE` (deployed after this run).
+
 ## Open items
 
 - Confirm `daily_hour = 1` is in `/etc/sanoid/sanoid.conf`.
@@ -364,8 +377,8 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
   2026-10-26.
 - §3: ~~create the storage account, container, policy and SAS; create the
   two rclone remotes; run `04-setup-azure-sync.sh`~~ (done 2026-10-25,
-  dry run: 207 GiB, 221k files); first upload started 2026-10-26; confirm
-  it finished and that the next 03:00 UTC run is incremental. Until it runs,
+  dry run: 207 GiB, 221k files); ~~first upload~~ done 2026-10-26 (see
+  Update). Left: confirm the next 03:00 UTC run is incremental. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
 - Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied

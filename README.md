@@ -17,7 +17,7 @@ When a decision changes, update its **Status** and add a dated
 | [0008](adr/adr-0008-proxmox-zfs-microk8s.md) | Proxmox VE + ZFS + 5-VM MicroK8s | Accepted — deployed 2026-09-21 |
 | [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20 |
 | [0010](adr/adr-0010-nextcloud-microk8s-deployment.md) | Nextcloud on MicroK8s: like-for-like move, Helm chart + own MariaDB, Tailscale operator | **Accepted — migrated 2026-09-26; on 35.0.2 (PHP 8.5.12) since 2026-10-23** |
-| [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26 except Azure sync |
+| [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26; Azure sync since 2026-10-26 |
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
 | [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted 2026-10-24 — host exporters deployed 2026-10-26; chart not installed yet |
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
@@ -43,25 +43,18 @@ When a decision changes, update its **Status** and add a dated
   2026-10-24. Left: store the HA backup encryption key; choose ZHA or
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
   cables. (`:8123` → port 80 in the docs fixed 2026-10-25.)
-- **ADR-0011**: snapshots, HGST backup copy and SMB share are live. Left:
-  Azure sync: script written 2026-10-25 (`scripts/04-setup-azure-sync.sh`,
-  newest daily snapshot → new storage account, crypt `k8s/`, 30 d of
-  deleted files), account, SAS and remotes set up, first upload started
-  2026-10-26 (`rclone.conf` is in the password manager since 2026-10-26);
-  `smartd` notifications via Discord since 2026-10-26 (ADR-0015); check
-  the 2026-10-26 daily snapshot is back at 01:30 UTC (the DST night's ran at 02:00). Dump
-  CronJob moved to `0 1 * * *` on 2026-10-25; syncoid runs hourly without
-  errors.
+- **ADR-0011**: snapshots, HGST backup copy, SMB share and the nightly
+  Azure sync are live (first upload 2026-10-26: 207 GiB, verified, restore
+  tested). Left: confirm the 2026-10-27 03:00 UTC run is incremental;
+  check the daily snapshot is back at 01:30 UTC (the DST night's ran at
+  02:00).
 - **ADR-0010**: on 35.0.2 since 2026-10-23; MariaDB tuned (512M buffer
   pool, 256M redo log). Left: recheck the buffer pool hit rate after a few
   days; pin the chart version
   (always `helm upgrade … --version 9.3.0` until then); back up `config/`
   before major upgrades (the app volume isn't snapshotted); decommission
-  the Podman stack on `{workstation}` (not before ADR-0011's Azure sync runs);
+  the Podman stack on `{workstation}` (unblocked: Azure sync runs since 2026-10-26);
   optional Redis/Valkey. (Observability follow-up: ADR-0013.)
-- **ADR-0008**: point the Azure/rclone backup at snapshots of
-  `hdd-mirror/k8s` (designed in ADR-0011). Snapshots and a local copy exist
-  since 2026-09-26; there is still no off-site copy.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; roles
   for the Seagate 1TB and Samsung 512GB SSD; 6TB purchase; GPU use. Disk

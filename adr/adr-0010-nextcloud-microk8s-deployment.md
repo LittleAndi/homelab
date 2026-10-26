@@ -336,9 +336,11 @@ still can't run (known, see the 2026-09-26 update).
 
 - Decommission the Podman stack on `{workstation}` after a few stable days. Keep
   `{old-stack-dir}` and the migration dump until the Azure backup covers
-  `hdd-mirror/k8s`.
-- ADR-0008: point the Azure/rclone backup at `hdd-mirror/k8s` snapshots.
-  Until then, the new data and the nightly DB dumps have no off-site copy.
+  `hdd-mirror/k8s`. (Unblocked 2026-10-26: the Azure backup covers it,
+  ADR-0011 §3.)
+- ~~ADR-0008: point the Azure/rclone backup at `hdd-mirror/k8s` snapshots.
+  Until then, the new data and the nightly DB dumps have no off-site copy.~~
+  Done 2026-10-26.
 - Recheck the InnoDB buffer pool hit rate after a few days of normal use
   (it restarts cold); raise the pool only if it stays below ~99%.
 - Move to an official chart release for 35 when one appears.
