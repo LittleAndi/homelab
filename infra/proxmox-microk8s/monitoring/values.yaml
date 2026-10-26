@@ -5,7 +5,7 @@
 #   scripts/render.sh
 #   helm upgrade --install kube-prometheus-stack \
 #     prometheus-community/kube-prometheus-stack -n monitoring \
-#     -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml --version <CHART_VERSION>
+#     -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml --version 92.13.1
 #
 # No secrets in this file: the repo is public. Grafana's admin login comes
 # from the Secret `grafana-admin`, created on the command line (README.md).
@@ -60,8 +60,9 @@ prometheus:
           resources:
             requests:
               storage: 20Gi
-    # Prefer wk2: wk1 carries MariaDB. local-path pins the pod to wherever the
-    # PVC is first bound, so this only matters on the first install.
+    # Prefer wk2 (node name microk8s-wk2): wk1 carries MariaDB. local-path
+    # pins the pod to wherever the PVC is first bound, so this only matters
+    # on the first install.
     # Check node names with `kubectl get nodes`.
     affinity:
       nodeAffinity:
@@ -71,7 +72,7 @@ prometheus:
               matchExpressions:
                 - key: kubernetes.io/hostname
                   operator: In
-                  values: ["wk2"]
+                  values: ["microk8s-wk2"]
     # Pick up ServiceMonitors/PodMonitors/rules from any namespace and release,
     # not only those created by this chart.
     serviceMonitorSelectorNilUsesHelmValues: false

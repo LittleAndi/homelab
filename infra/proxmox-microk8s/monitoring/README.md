@@ -11,7 +11,7 @@ kube-prometheus-stack in the cluster (namespace `monitoring`), Grafana at
 | `host/zfs-metrics.py` | ZFS pool/dataset/snapshot metrics for the textfile collector |
 | `dashboards/` | Exported Grafana dashboards as ConfigMaps (empty until the "Server overview" dashboard is built) |
 
-**Chart version:** `<CHART_VERSION>` (fill in at install; always pass `--version`).
+**Chart version:** `92.13.1` (app v0.94.1), picked 2026-10-26. Always pass `--version`.
 
 ## 1. Host exporters
 
@@ -58,7 +58,7 @@ unset GF_PW
 scripts/render.sh      # writes .rendered/… with the real tailnet from site.env
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   -n monitoring -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml \
-  --version <CHART_VERSION>
+  --version 92.13.1
 ```
 
 ## 3. Verify
@@ -101,4 +101,4 @@ applied by hand.
 
 `helm uninstall kube-prometheus-stack -n monitoring` keeps the CRDs and the
 PVs (`local-path-retain`). Delete those by hand if wanted. On the host:
-`systemctl disable --now pve-exporter prometheus-smartctl-exporter prometheus-node-exporter zfs-metrics.timer exporters-firewall`.
+`systemctl disable --now pve-exporter smartctl_exporter prometheus-node-exporter zfs-metrics.timer exporters-firewall`.
