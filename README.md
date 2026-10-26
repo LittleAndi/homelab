@@ -19,7 +19,7 @@ When a decision changes, update its **Status** and add a dated
 | [0010](adr/adr-0010-nextcloud-microk8s-deployment.md) | Nextcloud on MicroK8s: like-for-like move, Helm chart + own MariaDB, Tailscale operator | **Accepted — migrated 2026-09-26; on 35.0.2 (PHP 8.5.12) since 2026-10-23** |
 | [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26 except Azure sync |
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
-| [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted 2026-10-24 — not deployed yet |
+| [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted 2026-10-24 — host exporters deployed 2026-10-26; chart not installed yet |
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
 
@@ -33,8 +33,9 @@ When a decision changes, update its **Status** and add a dated
   integration) and remove the hand-uploaded docs; retire `NAS/adr`,
   `NAS/infra`, `NAS/README.md` in Nextcloud. (Token rotated and first
   `backup-local.sh` run 2026-10-25.)
-- **ADR-0013**: run `infra/proxmox-microk8s/monitoring/host/20-setup-host-exporters.sh`
-  on the host; pick and record the kube-prometheus-stack chart version;
+- **ADR-0013**: host exporters live 2026-10-26 (node, smartctl, pve,
+  zfs-metrics; firewall verified). Left: pick and record the
+  kube-prometheus-stack chart version;
   `helm install`; check all Prometheus targets are up; build the "Server
   overview" dashboard and export it as a ConfigMap; pin Grafana.com dashboard
   revisions.

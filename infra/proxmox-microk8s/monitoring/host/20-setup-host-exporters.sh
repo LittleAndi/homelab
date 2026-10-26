@@ -27,7 +27,7 @@ apt-get update -q
 # timers, which would overlap with smartctl_exporter.
 apt-get install -y -q --no-install-recommends prometheus-node-exporter python3-venv
 
-UNITS='(sanoid|syncoid-.+|zfs-metrics|smbd|nfs-server|zfs-zed|smartmontools|pveproxy|pvedaemon|pvestatd|pve-cluster|tailscaled|pve-exporter|prometheus-smartctl-exporter)\.(service|timer)'
+UNITS='(sanoid|syncoid-.+|azure-sync-k8s|zfs-metrics|smbd|nfs-server|zfs-zed|smartmontools|pveproxy|pvedaemon|pvestatd|pve-cluster|tailscaled|pve-exporter|smartctl_exporter)\.(service|timer)'
 cat > /etc/default/prometheus-node-exporter <<EOF
 # Managed by 20-setup-host-exporters.sh (ADR-0013)
 ARGS="--collector.textfile.directory=${TEXTFILE_DIR} --collector.systemd --collector.systemd.unit-include=${UNITS}"
@@ -77,7 +77,7 @@ EOF
 fi
 # Backports never install without -t, so this pulls in only this package.
 apt-get install -y -q -t trixie-backports prometheus-smartctl-exporter
-systemctl enable --now prometheus-smartctl-exporter
+systemctl enable --now smartctl_exporter   # the package names its unit smartctl_exporter
 
 echo "== 4/5 pve-exporter"
 id pve-exporter &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin pve-exporter
@@ -152,7 +152,7 @@ nft -c -f /etc/nftables-exporters.nft
 cat > /etc/systemd/system/exporters-firewall.service <<'EOF'
 [Unit]
 Description=Restrict Prometheus exporter ports (ADR-0013)
-Before=prometheus-node-exporter.service prometheus-smartctl-exporter.service pve-exporter.service
+Before=prometheus-node-exporter.service smartctl_exporter.service pve-exporter.service
 After=network-pre.target
 
 [Service]

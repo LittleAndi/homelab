@@ -1,6 +1,6 @@
 # ADR-0013: Monitoring — kube-prometheus-stack in the Cluster, Exporters on the Host
 
-**Status:** Accepted 2026-10-24 — not deployed yet
+**Status:** Accepted 2026-10-24 — host exporters deployed 2026-10-26; chart not installed yet
 **Date:** 2026-10-24
 
 ## Context
@@ -152,10 +152,27 @@ These are installed by `infra/proxmox-microk8s/monitoring/host/20-setup-host-exp
 - **Alerts** can be added later, through Alertmanager or Grafana alerting,
   without changing the collection side.
 
+## Update 2026-10-26: host exporters deployed
+
+- Script 20 run on the host. Installed: `prometheus-node-exporter` (Debian),
+  `prometheus-smartctl-exporter` 0.14.0 (trixie-backports),
+  `prometheus-pve-exporter` 3.10.1 (PyPI venv). Local checks: ZFS ARC,
+  3 pools, systemd unit states, SMART for **all 6 drives** (including the
+  HBA), `pve_up`.
+- The backports package names its unit **`smartctl_exporter.service`**,
+  not `prometheus-smartctl-exporter.service`; the script and the
+  node-exporter unit list were fixed.
+- `azure-sync-k8s` (ADR-0011 §3) added to node-exporter's systemd unit
+  list.
+- Firewall verified: all three ports answer `200` from cp1; from a
+  non-node LAN machine (WSL) and over Tailscale they time out.
+- Backports stays at priority 100: none of the host's upgradable packages
+  come from it.
+
 ## Open items
 
-- Run script 20 on the host. Verify the three ports from cp1, and that
-  another LAN machine is refused.
+- ~~Run script 20 on the host. Verify the three ports from cp1, and that
+  another LAN machine is refused.~~ Done 2026-10-26.
 - Pick the chart version, record it in the runbook, and run `helm install`.
 - Check that all targets are up in Prometheus (`/targets`), especially the
   `pve-*` jobs.
