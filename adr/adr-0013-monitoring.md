@@ -200,5 +200,6 @@ These are installed by `infra/proxmox-microk8s/monitoring/host/20-setup-host-exp
   `pve-*` jobs.~~ Done 2026-10-26: 32/32 up.
 - Build the "Server overview" dashboard and export it to
   `infra/proxmox-microk8s/monitoring/dashboards/` as a ConfigMap.
-- Pin the Grafana.com dashboard revisions in `values.yaml` (currently
-  `latest`).
+- ~~Pin the Grafana.com dashboard revisions in `values.yaml` (currently
+  `latest`).~~ Done 2026-10-26: 1860 rev 45, 10347 rev 5 (the revisions
+  already installed; helm revision 2).

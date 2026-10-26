@@ -150,7 +150,8 @@ grafana:
       check_for_plugin_updates: false
 
   # Grafana.com dashboards, downloaded by an init container at start-up.
-  # TODO (ADR-0013 open item): replace `latest` with pinned revisions.
+  # Pinned revisions (2026-10-26); to update, check
+  # https://grafana.com/api/dashboards/<id> for "revision" and bump here.
   dashboardProviders:
     dashboardproviders.yaml:
       apiVersion: 1
@@ -166,12 +167,12 @@ grafana:
   dashboards:
     homelab:
       node-exporter-full:
-        url: https://grafana.com/api/dashboards/1860/revisions/latest/download
+        url: https://grafana.com/api/dashboards/1860/revisions/45/download
         datasource:
           - name: DS_PROMETHEUS
             value: Prometheus
       proxmox-via-prometheus:
-        url: https://grafana.com/api/dashboards/10347/revisions/latest/download
+        url: https://grafana.com/api/dashboards/10347/revisions/5/download
         datasource:
           - name: DS_PROMETHEUS
             value: Prometheus

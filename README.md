@@ -35,7 +35,7 @@ When a decision changes, update its **Status** and add a dated
   `backup-local.sh` run 2026-10-25.)
 - **ADR-0013**: deployed 2026-10-26 (chart 92.13.1, all 32 targets up,
   Grafana on the tailnet). Left: build the "Server overview" dashboard and
-  export it as a ConfigMap; pin Grafana.com dashboard revisions.
+  export it as a ConfigMap. (Dashboard revisions pinned 2026-10-26.)
 - **ADR-0012**: VM, static IP (.25), Tailscale Serve and NFS backups done
   2026-10-24. Left: store the HA backup encryption key; choose ZHA or
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
