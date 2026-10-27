@@ -332,6 +332,12 @@ still can't run (known, see the 2026-09-26 update).
   ADR-0011's context guessed. wk1 had 512Mi requested and ~1.3 Gi in use
   before the change.
 
+## Update 2026-10-27: allow-all narrowed to members
+
+The policy file's allow-all now has source `autogroup:member`, so the
+`tag:k8s` proxies and the operator answer but don't initiate (ADR-0016).
+Everything above still works.
+
 ## Open items
 
 - Decommission the Podman stack on `{workstation}` after a few stable days. Keep

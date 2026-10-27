@@ -22,13 +22,14 @@ When a decision changes, update its **Status** and add a dated
 | [0013](adr/adr-0013-monitoring.md) | Monitoring: kube-prometheus-stack in the cluster (Grafana via Tailscale), exporters on the host; 30 d, no alerts | Accepted — **deployed 2026-10-26** (chart 92.13.1) |
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
-| [0016](adr/adr-0016-docker-sandbox-vm.md) | Docker sandbox VM (111): 2 GB, started on demand, firewalled off the LAN | Proposed |
+| [0016](adr/adr-0016-docker-sandbox-vm.md) | Docker sandbox VM (111): 2 GB, started on demand, firewalled off the LAN | Accepted — deployed 2026-10-27 |
 
 ## Open items
 
-- **ADR-0016**: proposed 2026-10-27. Left: decide the workload; add
-  `{workstation-ip}` to `site.env`; write `infra/proxmox-sandbox/`, create
-  and verify the VM.
+- **ADR-0016**: sandbox VM 111 deployed 2026-10-27, all isolation checks
+  passed; tailnet allow-all narrowed to members. Left: DHCP reservation for
+  `{workstation-ip}`; recheck proxies 2026-10-28, then the sandbox on the
+  tailnet; decide the workload.
 - **ADR-0015**: Discord notifications live 2026-10-26 (smartd, zed, failed
   backup units, Proxmox jobs); `default-matcher` (mail) disabled. Nothing
   left.
@@ -121,7 +122,8 @@ homelab/
 │   ├── proxmox-microk8s/nextcloud/   ← ADR-0010: runbook, values.yaml, mariadb.yaml,
 │   │                                    pvcs.yaml, loader-pod.yaml, storageclass, dump cronjob
 │   ├── proxmox-microk8s/monitoring/  ← ADR-0013: runbook, values.yaml, host exporters
-│   └── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
+│   ├── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
+│   └── proxmox-sandbox/              ← ADR-0016: sandbox VM + guest setup scripts, README
 ├── CLAUDE.md                         ← rules for Claude Code in this repo
 ├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)

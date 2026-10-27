@@ -1,6 +1,6 @@
 # ADR-0016: Docker Sandbox VM
 
-**Status:** Proposed
+**Status:** Accepted — deployed 2026-10-27
 **Date:** 2026-10-27
 
 ## Context
@@ -44,6 +44,7 @@ A VM is the isolation boundary.
 - `daemon.json`: `json-file` logs, `max-size: 10m`, `max-file: 3`.
 - User `sandbox` in the `docker` group (root-equivalent inside the VM only).
 - Every container gets `--memory`, `--cpus` and `--pids-limit`.
+- Minimal guest: snapd purged, multipathd and ModemManager off.
 - `docker system prune` on boot (a timer won't fire reliably on a VM that
   is mostly off). Unattended security upgrades on; rebuild, don't repair.
 
@@ -52,8 +53,8 @@ A VM is the isolation boundary.
 Proxmox firewall on the VM's NIC (`firewall=1`), in this order:
 
 - **In:** TCP 22 from `{workstation-ip}` only; key-only SSH.
-- **Out:** allow DNS to 192.168.1.1; drop 192.168.1.0/24 and
-  100.64.0.0/10; allow the rest (internet).
+- **Out:** allow DNS to 192.168.1.1; drop 192.168.1.0/24, 100.64.0.0/10
+  and multicast/broadcast; allow the rest (internet).
 - **IPv6 off in the guest** (`ipv6.disable=1`), so the IPv4 rules can't be
   bypassed.
 - **`ipfilter: 1`** in the VM's firewall options, so the guest can only
@@ -111,8 +112,48 @@ Proxmox firewall on the VM's NIC (`firewall=1`), in this order:
 - `zramctl` shows the device; `docker run --rm --memory 256m alpine true`
   works.
 
+## Update 2026-10-27: deployed
+
+Scripts 10 and 11 run as written. All checks passed:
+
+- From the VM: internet and DNS work; `.10` on 8006/22/2049/445,
+  `.20:16443` and ping to .25 are blocked. A second address (.27) added in
+  the guest can't get out (`ipfilter`). SSH from cp1 to .26 is refused.
+- Host after enabling the datacenter firewall: NFS and SMB answer,
+  exporters reachable from the nodes, all 32 scrape targets up.
+- Memory: guest 399 MiB used at idle with Docker; zram 980 MiB. Host
+  available 7.8 → 6.3 GiB while the VM runs.
+
+## Update 2026-10-27: tailnet policy narrowed (precondition for Tailscale)
+
+The policy file still had the default allow-all, so a tagged sandbox would
+have reached every device. Changed in the admin console:
+
+- Allow-all source `*` → `autogroup:member`: tagged devices (`tag:k8s`,
+  `tag:k8s-operator`, later `tag:sandbox`) answer but never initiate.
+- `tag:sandbox` added to `tagOwners` (`autogroup:admin`).
+- `tests` block: members reach `tag:k8s`, `tag:k8s-operator`,
+  `tag:sandbox:22`; `tag:sandbox` and `tag:k8s` are denied the members'
+  devices. A save fails if a test does.
+
+Verified: Nextcloud, Grafana, stockstalker, HA, `kubectl` via the operator
+and `ssh root@pve` work as before; pve's packet filter admits 0 of 4 tagged
+devices and all user-owned ones; no proxy errors.
+
+Not done yet: the sandbox itself on the tailnet (`--accept-routes=false`,
+non-ephemeral tagged key, `DOCKER-USER` drop to `tailscale0`), after the
+change has held for a day.
+
 ## Open items
 
 - Decide the workload (and whether Docker Sandboxes is wanted).
-- Add `{workstation-ip}` to `site.env` and `site.env.example`.
-- Write `infra/proxmox-sandbox/` (README + script 10), create the VM, verify.
+- ~~Add `{workstation-ip}` to `site.env` and `site.env.example`.~~ Done
+  2026-10-27 (`WORKSTATION_IP`). It's a DHCP address: reserve it on the
+  router.
+- ~~Write `infra/proxmox-sandbox/`.~~ Done 2026-10-27: script 10 (host:
+  VM, firewall, nftables) and 11 (guest: Docker, zram, checks).
+- ~~Create the VM and verify.~~ Done 2026-10-27.
+- DHCP reservation for `{workstation-ip}` on the router.
+- Recheck operator/proxy logs and the phone apps (2026-10-28), then put
+  the sandbox on the tailnet (script 11) and decide whether the LAN SSH
+  rule can go.

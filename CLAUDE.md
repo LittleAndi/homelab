@@ -49,4 +49,5 @@ relevant ADR before changing anything.
 - `infra/proxmox-microk8s/nextcloud/` — Helm values, MariaDB, runbook (ADR-0010)
 - `infra/proxmox-microk8s/monitoring/` — kube-prometheus-stack, host exporters (ADR-0013)
 - `infra/proxmox-ha/` — HAOS VM and backup scripts (ADR-0012)
+- `infra/proxmox-sandbox/` — Docker sandbox VM, host + guest scripts (ADR-0016)
 - `scripts/` — `render.sh`, `check-site-values.sh`, `backup-local.sh` (ADR-0014)
