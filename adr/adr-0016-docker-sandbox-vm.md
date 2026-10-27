@@ -160,9 +160,62 @@ services up, no denial errors in the operator or proxy logs.
 
 The LAN SSH rule (`{workstation-ip}` only) stays as a fallback for now.
 
+## Update 2026-10-28: workload is Docker Sandboxes; trial at 2 GB
+
+The workload is [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/)
+(`sbx`): AI coding agents (Claude Code and others) in microVMs on nested
+KVM, each with its own kernel and Docker daemon, egress through a
+deny-by-default proxy (UDP and ICMP blocked). Replaces §2 (Docker Engine)
+and the `DOCKER-USER` rule from the update above.
+
+- **Docker Engine removed**, `docker-sbx` (0.50.0) installed from Docker's
+  apt repository; `sandbox` in the `kvm` group. Host has `nested=1`, CPU
+  type `host`. Guest idle 399 → 350 MiB.
+- **Stays at 2 GB for a trial.** A sandbox gets 50% of the VM by default
+  (~1 GiB), at most 75% (`--memory`, ~1.4 GiB). Expect it to be tight for
+  builds; 3 GB VM with `--memory 2g` is the next step if it is.
+- **Layers:** microVM (inner) → `sbx` proxy policy → VM firewall → tailnet
+  policy. The VM is now the trusted side of the sandbox.
+- **Credentials in the VM** (reverses §4 "no credentials"): the Docker
+  account login and the agent's credential, stored by `sbx` under
+  `~/.config/com.docker.sandboxes` (0700, no keyring on a headless VM). The
+  proxy injects them, so they never enter the microVM. A git credential, if
+  any, is scoped to the repo being worked on.
+- Isolation checks rerun after the change: all pass.
+
+## Update 2026-10-28: sbx network policy and workspace layout
+
+**Policy:** Balanced (deny by default, common dev sites allowed; 195
+rules), minus 26 (→ 169), by script 13:
+
+- **Open object storage**, where anyone can create a bucket and so an agent
+  could upload code: `**.amazonaws.com`, `**.googleapis.com`,
+  `**.blob.core.windows.net`, `**.public.blob.vercel-storage.com`,
+  `**.googleusercontent.com`.
+- **Other agents' and SaaS endpoints** (only Claude is used): OpenAI,
+  Cursor, Gemini, Perplexity, Factory, models.dev, WorkOS, Supabase, Clerk,
+  Figma, Daytona, Vercel.
+- Kept: Anthropic, package managers, OS packages, certificate checks,
+  GitHub/GitLab, container registries, read-only CDNs, Playwright.
+- A tool that breaks gets its one host allowed (`sbx policy log` shows
+  it), not the wildcard back.
+
+**Workspaces:** one folder and one sandbox per project,
+`~/work/<repo>`, always `sbx run claude --clone` from that folder. The
+agent works on a private clone and its commits come back through the
+`sandbox-<name>` remote, reviewed before pushing. Never start a sandbox from
+`~`: it holds `sbx`'s credentials and `~/.ssh`. One folder for all projects
+would put every repo in one sandbox's reach. The CLI can't narrow the
+filesystem rules (`**`), so this is a convention.
+
+**Pushing:** from `~/work/<repo>` in the VM, outside the sandbox, with a
+per-repo GitHub deploy key (write); no account-wide token in the VM.
+
 ## Open items
 
-- Decide the workload (and whether Docker Sandboxes is wanted).
+- ~~Decide the workload.~~ Docker Sandboxes, 2026-10-28.
+- Try `sbx run claude --clone` on a first repo; measure memory, then keep
+  2 GB or move to 3 GB.
 - ~~Add `{workstation-ip}` to `site.env` and `site.env.example`.~~ Done
   2026-10-27 (`WORKSTATION_IP`). It's a DHCP address: reserve it on the
   router.

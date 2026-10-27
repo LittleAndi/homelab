@@ -2,9 +2,9 @@
 # Run INSIDE the sandbox VM as root, once after 10-create-sandbox-vm.sh:
 #   ssh sandbox@192.168.1.26 'sudo bash -s' < infra/proxmox-sandbox/scripts/11-setup-sandbox-guest.sh
 #
-# Sets up the guest (ADR-0016): IPv6 off, zram, Docker Engine + Compose,
-# log rotation, prune on boot, key-only SSH, unattended upgrades. Ends with
-# the isolation checks and a reboot (for ipv6.disable=1).
+# Sets up the guest (ADR-0016): IPv6 off, zram, Docker Sandboxes (`sbx`,
+# microVMs on nested KVM; no Docker Engine), key-only SSH, unattended
+# upgrades. Ends with the isolation checks and a reboot (for ipv6.disable=1).
 set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
@@ -35,7 +35,7 @@ EOF
 systemctl daemon-reload
 systemctl start systemd-zram-setup@zram0.service
 
-echo "== 4/6 Docker Engine + Compose from Docker's apt repository"
+echo "== 4/6 Docker Sandboxes (sbx) from Docker's apt repository"
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
@@ -47,34 +47,9 @@ Components: stable
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
 apt-get update || { echo "Docker's repository has no '${VERSION_CODENAME}' suite yet?" >&2; exit 1; }
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-mkdir -p /etc/docker
-cat > /etc/docker/daemon.json <<'EOF'
-{
-  "log-driver": "json-file",
-  "log-opts": { "max-size": "10m", "max-file": "3" }
-}
-EOF
-systemctl restart docker
-usermod -aG docker sandbox
-
-# Prune on boot: a weekly timer won't fire reliably on a VM that's mostly off.
-cat > /etc/systemd/system/docker-prune.service <<'EOF'
-[Unit]
-Description=Prune unused Docker objects older than 7 days (ADR-0016)
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/docker system prune -af --filter until=168h
-
-[Install]
-WantedBy=multi-user.target
-EOF
-systemctl daemon-reload
-systemctl enable docker-prune.service
+# No Docker Engine: each sandbox is a microVM with its own daemon.
+apt-get install -y docker-sbx
+usermod -aG kvm sandbox
 
 echo "== 5/6 SSH key-only, unattended upgrades on"
 cat > /etc/ssh/sshd_config.d/90-sandbox.conf <<'EOF'
@@ -98,7 +73,8 @@ getent hosts example.com >/dev/null && ok "DNS" || bad "DNS"
 for p in 8006 22 2049 445; do blocked 192.168.1.10 "$p"; done
 blocked 192.168.1.20 16443
 ping -c1 -W2 192.168.1.25 >/dev/null 2>&1 && bad "ping .25 answered" || ok "ping .25 blocked"
-docker run --rm --memory 256m --cpus 1 --pids-limit 100 alpine true && ok "docker run" || bad "docker run"
+sudo -u sandbox -g kvm test -w /dev/kvm && ok "/dev/kvm usable by sandbox" || bad "/dev/kvm"
+command -v sbx >/dev/null && ok "sbx $(sbx version 2>/dev/null | head -1)" || bad "sbx missing"
 zramctl | grep -q zram0 && ok "zram0" || bad "zram0"
 
 if [ "$fail" -ne 0 ]; then
