@@ -19,16 +19,17 @@ provider "proxmox" {
 # Static IPs: .20-.22 control-plane, .23-.24 workers. Servers use
 # .20-.63; the Proxmox host itself is .10. All outside DHCP (.64-.243).
 # ---------------------------------------------------------------------------
-# RAM: 3 GB control plane, 4 GB workers (17 GB total on a 32 GB host).
-# Fixed allocation, no ballooning (k8s schedules against the max). To grow a
-# node: raise memory here, apply, then drain/reboot/uncordon one node at a time.
+# RAM: 3 GB per node (15 GB total on a 32 GB host; workers cut from 4 GB on
+# 2026-10-27, ADR-0008). Fixed allocation, no ballooning (k8s schedules
+# against the max). To resize a node: change memory here, then one node at a
+# time: drain, apply (or `qm set` + `qm reboot` on the host), uncordon.
 locals {
   nodes = {
     cp1 = { vmid = 101, ip = "192.168.1.20", cores = 2, memory = 3072, disk_gb = 40 }
     cp2 = { vmid = 102, ip = "192.168.1.21", cores = 2, memory = 3072, disk_gb = 40 }
     cp3 = { vmid = 103, ip = "192.168.1.22", cores = 2, memory = 3072, disk_gb = 40 }
-    wk1 = { vmid = 104, ip = "192.168.1.23", cores = 4, memory = 4096, disk_gb = 60 }
-    wk2 = { vmid = 105, ip = "192.168.1.24", cores = 4, memory = 4096, disk_gb = 60 }
+    wk1 = { vmid = 104, ip = "192.168.1.23", cores = 4, memory = 3072, disk_gb = 60 }
+    wk2 = { vmid = 105, ip = "192.168.1.24", cores = 4, memory = 3072, disk_gb = 60 }
   }
 }
 

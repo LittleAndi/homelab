@@ -1,6 +1,6 @@
 # ADR-0008: Proxmox VE + ZFS + 5-VM MicroK8s Cluster
 
-**Status:** Accepted — deployed and verified 2026-09-21. Supersedes ADR-0004 and ADR-0006.
+**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27. Supersedes ADR-0004 and ADR-0006.
 
 > The Decision section below is the original proposal. The dated Update
 > sections record what changed on the way to the deployed state; where they
@@ -207,7 +207,54 @@ was removed. The secret is in the password manager and is read into
 `terraform@pve!tf2=…` must be in single quotes, or history expansion
 rejects the line.
 
+## Update 2026-10-27: workers cut to 3 GB (cluster 17 → 15 GB)
+
+Measured over the 42 h of Prometheus history (since ADR-0013):
+
+| Node | Allocated | Peak used | Lowest available | Main pods |
+|---|---|---|---|---|
+| cp1–cp3 | 3 GB | 1.45–1.98 GiB | 0.91 GiB (cp2) | Grafana, Nextcloud app, stockstalker |
+| wk1 | 4 GB | 1.59 GiB | 2.09 GiB | MariaDB (peak 793 Mi) |
+| wk2 | 4 GB | 1.73 GiB | 2.01 GiB | Prometheus (peak 933 Mi) |
+
+Host: 24.9 of 31 GiB used, 5.7 GiB lowest available, no swap.
+
+- **Workers 4 → 3 GB.** Workers don't run the API server or dqlite, so
+  their base is ~0.6 GiB; at 3 GB the worst-case limit on each (MariaDB
+  1.5 Gi, Prometheus 2 Gi) still fits. Memory requests add up to ~4.2 GiB
+  across the cluster.
+- **Control plane stays at 3 GB.** Base ~1.2 GiB per node (kubelite +
+  dqlite) and cp2 already dipped to 0.9 GiB available; 2.5 GB would leave
+  ~400 MiB.
+- **Grow, don't pre-provision.** Watch node memory in Grafana and raise a
+  node again if it gets tight, rather than keeping headroom unused.
+- **Result:** host available memory 6.2 → 8.0 GiB; all 32 scrape targets up.
+
+Done without Terraform (token not in the shell): one worker at a time,
+`kubectl drain`, `qm set <vmid> --memory 3072`, `qm reboot <vmid>`
+(applies the pending change), uncordon. `terraform/main.tf` has the same
+value, so the next `terraform plan` should show no changes. This also
+avoids the provider rebooting both workers at once on apply.
+
+Learned during the drain:
+
+- **`local-path` volumes pin pods to their node.** Draining wk1 left
+  `nextcloud-db-0` Pending (PV node affinity), so Nextcloud was down until
+  wk1 was back (~2 min). Same on wk2 for Prometheus and stockstalker's
+  postgres; on cp2 for Grafana, on cp3 for the Nextcloud app volume. A
+  node reboot is a short outage of whatever has its volume there.
+- **The Tailscale operator is the `kubectl` path.** Draining its node
+  (wk1) reset the connection mid-drain; it was rescheduled on cp3 and a
+  second `drain` finished the job.
+- **Swap:** none in the guests (kubelet default, and an OOM kill is easier
+  to see than a node thrashing). On the host, never on ZFS (zvol swap can
+  deadlock under memory pressure); zram is the option if the host ever
+  needs a buffer. Not decided.
+
 ## Open items
+
+- Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no
+  drift after the 2026-10-27 worker resize, then `scripts/backup-local.sh`.
 
 - ~~Rotate the `terraform@pve` token: new token into the password manager,
   delete the old one, `terraform plan` shows no changes.~~ Done 2026-10-25
