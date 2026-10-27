@@ -253,8 +253,9 @@ Learned during the drain:
 
 ## Open items
 
-- Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no
-  drift after the 2026-10-27 worker resize, then `scripts/backup-local.sh`.
+- ~~Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no
+  drift after the 2026-10-27 worker resize, then `scripts/backup-local.sh`.~~
+  Done 2026-10-27: no changes; backup run.
 
 - ~~Rotate the `terraform@pve` token: new token into the password manager,
   delete the old one, `terraform plan` shows no changes.~~ Done 2026-10-25

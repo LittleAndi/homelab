@@ -53,9 +53,9 @@ When a decision changes, update its **Status** and add a dated
   the Podman stack on `{workstation}` (unblocked: Azure sync runs since 2026-10-26);
   optional Redis/Valkey. (Observability follow-up: ADR-0013.)
 - **ADR-0008 (VM RAM, 2026-10-27)**: workers cut to 3 GB via `qm set`
-  (host available 6.2 → 8.0 GiB). Left: `terraform plan` shows no drift,
-  then `backup-local.sh`; grow a node again if Grafana shows it tight.
-  Host zram: optional, not decided.
+  (host available 6.2 → 8.0 GiB); `terraform plan` clean, backup run.
+  Left: grow a node again if Grafana shows it tight. Host zram: optional,
+  not decided.
 - **ADR-0008 (host updates, found 2026-10-26)**: 39 packages pending on
   the host, 27 security. Maintenance window: `apt full-upgrade`, reboot if
   needed (ask first), check cluster/HA/timers afterwards.
