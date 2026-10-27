@@ -9,7 +9,7 @@ scripts, no Terraform.
 |---|---|
 | VM | 111 `sandbox`, clone of 9000, 4 vCPU (`host`, `cpuunits` 25), 2 GB fixed + zram, 80 GB on `local-zfs` (I/O capped), `onboot=0` |
 | IP | 192.168.1.26 (static via cloud-init), gateway/DNS 192.168.1.1 |
-| In | SSH from `{workstation-ip}` only (needs a DHCP reservation on the router) |
+| In | SSH from `{workstation-ip}` on the LAN, or from members over the tailnet (`sandbox.{tailnet}.ts.net`) |
 | Out | DNS to .1 and the internet; LAN, tailnet, multicast dropped; IPv6 off |
 
 ## Run order
@@ -36,11 +36,20 @@ scripts, no Terraform.
    ```
    Reboots the VM only if every check passes.
 
+4. **Tailnet** — needs the policy from ADR-0016 (update 2026-10-27). Create
+   an auth key: tag `tag:sandbox`, pre-approved, not reusable, not
+   ephemeral, 1 day. Then, in your own terminal:
+   ```
+   scp infra/proxmox-sandbox/scripts/12-join-tailnet.sh sandbox@192.168.1.26:
+   read -rs k; printf %s "$k" | ssh sandbox@192.168.1.26 'sudo bash 12-join-tailnet.sh'; unset k
+   ```
+   Rebuilding: remove the old `sandbox` device in the admin console first.
+
 ## Use
 
 ```
 ssh root@pve qm start 111        # when needed
-ssh sandbox@192.168.1.26
+ssh sandbox@sandbox.{tailnet}.ts.net   # or sandbox@192.168.1.26 on the LAN
 docker run --rm --memory 1g --cpus 2 --pids-limit 256 …   # always set limits
 ssh root@pve qm shutdown 111     # when done
 ```
@@ -50,7 +59,7 @@ backed up.
 
 ## Notes
 
-- Rebuild, don't repair: `qm stop 111 && qm destroy 111`, then steps 2–3.
+- Rebuild, don't repair: `qm stop 111 && qm destroy 111`, then steps 2–4.
   Script 10 leaves existing `host.fw`/`cluster.fw` alone if they're already
   set correctly, and rewrites `111.fw` and the nftables table.
 - After any firewall change, rerun the checks (the end of script 11).

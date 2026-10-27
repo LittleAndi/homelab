@@ -144,6 +144,22 @@ Not done yet: the sandbox itself on the tailnet (`--accept-routes=false`,
 non-ephemeral tagged key, `DOCKER-USER` drop to `tailscale0`), after the
 change has held for a day.
 
+## Update 2026-10-28: sandbox on the tailnet
+
+Replaces "No Tailscale on the VM" in §3. Script 12 (guest) installs
+Tailscale, joins as `tag:sandbox` (`--accept-routes=false`,
+`--accept-dns=false`, auto-update on) with a pre-approved, single-use,
+non-ephemeral key passed on stdin, and adds a `DOCKER-USER` drop for new
+connections out `tailscale0`.
+
+Verified: `ssh sandbox@sandbox.{tailnet}.ts.net` works from the
+workstation. From the VM and from a container, pve (22, 8006), the
+Nextcloud and Grafana proxies and the workstation are unreachable over the
+tailnet; internet works. The policy change held a day: all tailnet
+services up, no denial errors in the operator or proxy logs.
+
+The LAN SSH rule (`{workstation-ip}` only) stays as a fallback for now.
+
 ## Open items
 
 - Decide the workload (and whether Docker Sandboxes is wanted).
@@ -154,6 +170,7 @@ change has held for a day.
   VM, firewall, nftables) and 11 (guest: Docker, zram, checks).
 - ~~Create the VM and verify.~~ Done 2026-10-27.
 - DHCP reservation for `{workstation-ip}` on the router.
-- Recheck operator/proxy logs and the phone apps (2026-10-28), then put
-  the sandbox on the tailnet (script 11) and decide whether the LAN SSH
-  rule can go.
+- ~~Recheck operator/proxy logs, then put the sandbox on the tailnet.~~
+  Done 2026-10-28 (script 12).
+- Phone apps (Nextcloud, HA) away from home after the policy change.
+- Decide whether the LAN SSH rule can go (then no DHCP reservation needed).
