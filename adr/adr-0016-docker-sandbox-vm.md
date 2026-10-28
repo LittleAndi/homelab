@@ -238,13 +238,43 @@ before review.
 - `sbx` forwards the SSH agent by default; the VM has none, and it is never
   reached with `ssh -A`.
 
+## Update 2026-10-28: first `sbx run claude --clone` trial
+
+First session: `sbx run claude --clone` on this repo (sandbox
+`claude-homelab`, clone mode), doing docs and git work.
+
+- **Memory:** the microVM sees **935 MiB** (the 50% default), ~330 MiB
+  used and ~600 MiB available with Claude Code idle between tool calls. Docs
+  and git work fit; builds and `terraform init` haven't been tried.
+- **Isolation from inside the microVM:** a raw TCP connect to `.10:8006`,
+  `.10:22`, `192.168.1.20:16443` and `.25:80` *succeeds*, because the `sbx`
+  proxy accepts it. Over HTTP, Proxmox and HA get the proxy's 403 (policy
+  block). SSH to `.10` gets no banner. Check with a real protocol, not a
+  port probe.
+- **Consequence:** a session in the sandbox can't reach `pve`, the cluster
+  or HA (no `kubectl` either). Host and cluster checks run from the
+  workstation; the sandbox is for repo work.
+- **Pushing:** with the token from the update above, the agent pushed this
+  branch itself; the PR is opened from the workstation.
+- **pre-commit's gitleaks hook** compiles from Go source, so in the
+  sandbox it needs extra hosts. Through the Go proxy that needs `storage.googleapis.com`
+  (removed on purpose); with `GOPROXY=direct` it needs
+  `go.googlesource.com`, `go4.org`, `gopkg.in` and `dario.cat`, allowed
+  for this sandbox 2026-10-28 (never the `**.googleapis.com` wildcard). The
+  site-values check skips without `site.env`, which a clone doesn't have.
+- **Stays at 2 GB.** Grow to 3 GB with `--memory 2g` when a real workload
+  hits the ceiling. VM-level usage (`free -m` in VM 111 during a session)
+  not measured yet.
+
 ## Open items
 
 - ~~Decide the workload.~~ Docker Sandboxes, 2026-10-28.
 - Renew each sandbox's GitHub token before it expires: `claude-homelab`
   by 2026-11-27.
-- Try `sbx run claude --clone` on a first repo; measure memory, then keep
-  2 GB or move to 3 GB.
+- ~~Try `sbx run claude --clone` on a first repo.~~ Done 2026-10-28:
+  ~600 MiB free in the microVM for docs/git work; stays at 2 GB.
+- Measure VM-level memory during a session; move to 3 GB (`--memory 2g`)
+  if a build hits the ceiling.
 - ~~Add `{workstation-ip}` to `site.env` and `site.env.example`.~~ Done
   2026-10-27 (`WORKSTATION_IP`). It's a DHCP address: reserve it on the
   router.
