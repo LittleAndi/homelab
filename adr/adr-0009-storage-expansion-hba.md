@@ -1,6 +1,6 @@
 # ADR-0009: Storage Expansion — LSI SAS 9211-8i HBA; Disk Inventory
 
-**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); mirror not created yet. Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
+**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); role decided in ADR-0017 (ZFS mirror `tank`, not created yet). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
 **Date:** 2026-09-21
 
 ## Context
@@ -179,8 +179,8 @@ Open items:
 - Optional burn-in before use (destructive, drives are empty):
   `badblocks -b 4096 -wsv -t 0xaa <by-id>`, about a day per pass; re-check
   SMART afterwards.
-- Choose the mirror's filesystem and role (new ADR). ZFS would match the
-  rest of the host (sanoid, zed, scrubs, ADR-0008/0011).
+- ~~Choose the mirror's filesystem and role (new ADR).~~ Decided
+  2026-10-28 in ADR-0017: ZFS mirror `tank` for bulk media and backups.
 - Scheduled smartd self-tests (short daily, long monthly, staggered) and
   `-W` temperature limits; better as per-disk lines or a `DEVICESCAN` change
   for all disks.

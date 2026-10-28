@@ -354,6 +354,15 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - Progress lines were missing from the log: rclone logs stats at INFO.
   Fixed with `--stats-log-level NOTICE` (deployed after this run).
 
+## Update 2026-10-28: bulk moves to the IronWolf mirror (ADR-0017)
+
+Two 8 TB drives came instead of the 6 TB (ADR-0009). Under ADR-0017,
+`hgst/bulk` moves to `tank/media` on the new mirror and the Samba `[bulk]`
+share follows it; `hgst` then keeps only `hgst/backup`. The rest of the
+migration data (~1 TiB) also goes to `tank/media`, with no off-site copy.
+Only `tank/archive` (irreplaceable bulk) gets an off-site copy, with the
+§3 mechanism.
+
 ## Open items
 
 - Confirm `daily_hour = 1` is in `/etc/sanoid/sanoid.conf`.
