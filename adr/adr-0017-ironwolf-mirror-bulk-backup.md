@@ -67,13 +67,16 @@ The default is no off-site copy, and `tank/archive` stays small.
    `hgst/bulk` (ask first, CLAUDE.md rule 5). That frees ~400G on `hgst`.
 2. The remaining ~1 TiB from the old migration container: a new short-lived
    **Read + List** SAS, `rclone copy` into `/tank/media/` on the host (as in
-   ADR-0011's update 2026-09-27, as a `systemd-run` unit). Network-bound
-   (~272 Mbit/s → roughly 9–10 h).
+   ADR-0011's update 2026-09-27, as a `systemd-run` unit), **in batches
+   within the egress budget of §7**, not in one go. Network time is not the
+   limit (~272 Mbit/s → ~100 GB in about an hour).
 3. Sort: move the irreplaceable parts to `tank/archive` (`mv` across datasets
    is a copy plus a delete).
 4. Once everything is home and checked, delete the old container or account
    (ask first). The data then exists only at home, plus whatever
-   `tank/archive` has off-site.
+   `tank/archive` has off-site. Parts already home and on the mirror (the
+   400 GiB `tmp`, then each batch) can be deleted from Azure as they land,
+   so the storage bill shrinks along the way.
 
 ### 4. `tank/backup`
 
@@ -106,6 +109,54 @@ has content.
   Discord (ADR-0015).
 - smartd already covers the disks (`DEVICESCAN`). Scheduled self-tests and
   temperature limits are an open item (ADR-0009).
+
+### 7. Egress budget: Azure downloads cost money
+
+Downloading from Azure is billed; uploading isn't. List prices, Sweden
+Central, USD, checked 2026-10-28 via the Azure Retail Prices API
+(`prices.azure.com`). The old migration account's region and tier are
+**not confirmed yet**:
+
+| | Hot | Cool | Cold | Archive |
+|---|---|---|---|---|
+| Storage, per GB-month | 0.0184 | 0.010 | 0.0036 | 0.00099 |
+| Retrieval, per GB | 0 | 0.01 | 0.03 | 0.024 + rehydration |
+| Minimum retention | — | 30 d | 90 d | 180 d |
+
+Internet egress: **first 100 GB per month free** (for the whole billing
+account, all regions and services), then 0.087/GB.
+
+Rules:
+
+- **Default: stay inside the free 100 GB per month.** Each batch is
+  `rclone copy … --max-transfer 95G --cutoff-mode soft` (the 5 GB margin
+  covers restore tests and other small downloads in the same month).
+  `rclone copy` skips files that are already home, so the same command
+  resumes the next month.
+- **Waiting isn't free either:** whatever's still in Azure keeps paying for
+  storage. A GB is worth holding for a free month only while
+  `months waited × storage price < 0.087`: about 4–5 months on Hot, 8–9
+  on Cool. Data that would wait longer is cheaper to pull now and pay for.
+  The plan is recalculated once the old account's tier and the file list
+  are known.
+- **Cheapest of all: don't download it.** List the container first
+  (listing costs fractions of a cent) and delete what isn't wanted straight
+  in Azure.
+- Other downloads count against the same 100 GB: off-site restore tests
+  (ADR-0011 §3), `rclone check`/`cryptcheck` (they read the data). Uploads and
+  the nightly off-site sync are free in transfer terms (they pay only for
+  operations).
+- The Azure 400 GiB from 2026-09-27 (ADR-0011) went far past the free
+  allowance (~330 GB billed, roughly $29 at today's list price).
+
+**Tracking:** every batch gets a row in the log below (date, GB
+downloaded that month from all sources, cumulative, what's left). Before a
+batch, check the month's earlier rows and the Azure cost view. Rows are
+added in this ADR, no new Update section per batch.
+
+| Month | Batch | GB from Azure this month | Migration data home (cumulative) | Not home yet |
+|---|---|---|---|---|
+| 2026-09 | `tmp` (ADR-0011) | ~430 | ~430 GB (400 GiB) | ~1.1 TB |
 
 ## Alternatives considered
 
@@ -141,8 +192,14 @@ has content.
 - Create `tank` and the datasets after the self-tests (and optional burn-in).
 - Move `hgst/bulk` → `tank/media`, repoint Samba, then destroy `hgst/bulk`
   (ask first).
-- New Read + List SAS for the old container; pull the remaining ~1 TiB into
-  `tank/media`.
+- Confirm the old migration account's region and tier (`az storage account
+  show`) and this month's egress (Azure cost view); then fix the batch plan
+  (§7).
+- New Read + List SAS for the old container; list it, delete what isn't
+  wanted in Azure, then pull the rest into `tank/media` in batches (§7),
+  logging each one.
+- Delete `tmp` (400 GiB, already home) from the old container once it's on
+  `tank` (ask first): it's paying storage for a copy that's no longer needed.
 - Sort irreplaceable data into `tank/archive`; then choose the Azure tier and
   extend the off-site sync to `archive/`.
 - Delete the old migration container or account once everything is home
