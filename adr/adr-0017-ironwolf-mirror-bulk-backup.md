@@ -173,6 +173,13 @@ Hot read ops for a full download: ~15 kr. Keeping it on Hot costs
 The curve is flat around 3–5 months; the real saving is pruning: every
 GB not downloaded saves up to 0.87 kr, plus its storage.
 
+**Listing 2026-10-28** (full, decrypted, on the host): 1,134 GB, no file
+over 15 GB (so no file breaks the 95 GB batch cap); 3.75M files under 1 MB
+hold only 55 GB. Build output and package folders (`node_modules`,
+`bin/obj`, NuGet `packages`, `.git`, `dist`…) are 1.61M files / 43 GB;
+game libraries 42 GB (deleted the same day). Estimate after that: ~710 kr.
+Folder names stay out of the repo.
+
 **Plan (cheapest estimate, stays Hot):**
 
 1. **One rclone listing with real names** (new Read + List + Delete SAS;
@@ -206,6 +213,7 @@ added in this ADR, no new Update section per batch.
 |---|---|---|---|---|
 | 2026-09 | `tmp` (ADR-0011) | ~430 | ~430 GB (400 GiB) | ~1.1 TB |
 | 2026-10 | partial `az storage blob list` (stopped), metrics | <1 (list responses) | ~430 GB | 1,139 GB, 3.85M files |
+| 2026-10 | full decrypted listing (`rclone lsf -R --fast-list`, kept on the host); **deleted** game libraries (7,127 files, 42 GB) | ~4 (list responses) | ~430 GB | 1,092 GB, 3.85M files |
 
 ## Alternatives considered
 

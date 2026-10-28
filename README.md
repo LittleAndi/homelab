@@ -31,9 +31,9 @@ When a decision changes, update its **Status** and add a dated
   `backup`) decided 2026-10-28. Left: create after the self-tests; move
   `hgst/bulk` → `tank/media` and repoint Samba, then destroy `hgst/bulk`
   (ask first); old container is Hot, 1,139 GB in 3.85M files (~209
-  kr/month): rclone listing, prune in Azure (ask first), then a paid batch
-  + ~4 free months, est. ~765 kr before pruning (ADR-0017 §7, log each
-  batch);
+  kr/month): listed 2026-10-28, games deleted (now 1,092 GB); prune more
+  (build output, others), then a paid batch + ~4 free months, est. ~710 kr
+  (ADR-0017 §7, log each batch);
   sort irreplaceable data into `tank/archive`, pick its Azure tier, extend
   the off-site sync; delete the old migration container (ask first);
   decide what goes in `tank/backup`.
