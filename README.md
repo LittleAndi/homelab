@@ -30,10 +30,10 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
   `backup`) decided 2026-10-28. Left: create after the self-tests; move
   `hgst/bulk` → `tank/media` and repoint Samba, then destroy `hgst/bulk`
-  (ask first); confirm the old account's tier/region, new SAS, list and
-  prune, then pull the remaining ~1 TiB **in batches within the free
-  100 GB/month egress** (log in ADR-0017 §7); delete `tmp` from Azure once
-  on `tank`;
+  (ask first); delete `tmp` from Azure now (ask first, 43–79 kr/month);
+  confirm the old account's tier/region, new SAS, list and prune, re-tier
+  to Archive and pull the remaining ~1 TiB **95 GB/month (free egress)**,
+  est. ~355 kr over ~12 months (ADR-0017 §7, log each batch);
   sort irreplaceable data into `tank/archive`, pick its Azure tier, extend
   the off-site sync; delete the old migration container (ask first);
   decide what goes in `tank/backup`.
