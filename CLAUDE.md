@@ -34,6 +34,11 @@ relevant ADR before changing anything.
 6. **Use `/dev/disk/by-id/…`, never `sdX`** (letters shift; ADR-0009).
 7. After `terraform apply`, a `site.env` change or a new Z-Stick backup, run
    `scripts/backup-local.sh`.
+8. **`main` is protected: branch and PR.** Never push to `main`. Work on a
+   branch, push it, `gh pr create`. Branches pushed by the `sbx` agent
+   (ADR-0016) get `pre-commit run --from-ref origin/main --to-ref
+   origin/<branch>` here before merging; the sandbox can't run the
+   site-value check.
 
 ## Access from this machine (WSL)
 

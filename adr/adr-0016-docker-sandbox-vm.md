@@ -211,9 +211,27 @@ filesystem rules (`**`), so this is a convention.
 **Pushing:** from `~/work/<repo>` in the VM, outside the sandbox, with a
 per-repo GitHub deploy key (write); no account-wide token in the VM.
 
+## Update 2026-10-28: pushing via branches and PRs
+
+`main` is now protected by a ruleset (no deletion, no force-push, PR
+required, 0 approvals, no bypass), so the per-repo deploy key above is
+replaced:
+
+- The agent pushes a branch with a per-sandbox fine-grained token (one
+  repo, Contents read/write only, 30 days), stored with
+  `sbx secret set github --sandbox <name>` and injected by the `sbx` proxy.
+  Without Pull requests permission it can't open or merge a PR.
+- PRs are opened and merged from the workstation after
+  `pre-commit run --from-ref origin/main --to-ref origin/<branch>`: the
+  sandbox has no `site.env`, so the site-value hook can't run there.
+  GitHub push protection still covers known secret formats.
+- `sbx` forwards the SSH agent by default; the VM has none, and it is never
+  reached with `ssh -A`.
+
 ## Open items
 
 - ~~Decide the workload.~~ Docker Sandboxes, 2026-10-28.
+- Renew the `claude-homelab` GitHub token before it expires (30 days).
 - Try `sbx run claude --clone` on a first repo; measure memory, then keep
   2 GB or move to 3 GB.
 - ~~Add `{workstation-ip}` to `site.env` and `site.env.example`.~~ Done
