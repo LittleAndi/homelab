@@ -15,7 +15,7 @@ When a decision changes, update its **Status** and add a dated
 | [0006](adr/adr-0006-container-platform.md) | Podman | Superseded by 0008 |
 | [0007](adr/adr-0007-application-stack.md) | Compose stack, Tailscale+Caddy, observability | Superseded by 0010 |
 | [0008](adr/adr-0008-proxmox-zfs-microk8s.md) | Proxmox VE + ZFS + 5-VM MicroK8s | Accepted — deployed 2026-09-21; workers 4 → 3 GB 2026-10-27 (cluster 15 GB) |
-| [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20 |
+| [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20; 2× used IronWolf 8 TB (instead of 6 TB) installed 2026-10-28 |
 | [0010](adr/adr-0010-nextcloud-microk8s-deployment.md) | Nextcloud on MicroK8s: like-for-like move, Helm chart + own MariaDB, Tailscale operator | **Accepted — migrated 2026-09-26; on 35.0.2 (PHP 8.5.12) since 2026-10-23** |
 | [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26; Azure sync since 2026-10-26 |
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
@@ -71,8 +71,13 @@ When a decision changes, update its **Status** and add a dated
   needed (ask first), check cluster/HA/timers afterwards.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; roles
-  for the Seagate 1TB and Samsung 512GB SSD; 6TB purchase; GPU use. Disk
+  for the Seagate 1TB and Samsung 512GB SSD; GPU use. Disk
   letters shifted with the HBA: use `/dev/disk/by-id/…`, not `sdX`.
+- **ADR-0009 (IronWolf 8 TB, 2026-10-28)**: two used ST8000VN004 installed,
+  verified empty, SMART clean; extended self-tests started 2026-10-28
+  20:54 CET. Left: check results + save `smartctl -x` baseline; optional
+  badblocks burn-in; choose the mirror's filesystem and role (new ADR);
+  scheduled smartd self-tests / temperature limits.
 
 ## Using this repo
 

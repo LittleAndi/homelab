@@ -1,6 +1,6 @@
 # ADR-0009: Storage Expansion — LSI SAS 9211-8i HBA; Disk Inventory
 
-**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
+**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); mirror not created yet. Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
 **Date:** 2026-09-21
 
 ## Context
@@ -124,4 +124,63 @@ Open items:
   built for server airflow; overheating shows up as `mpt3sas` resets and
   dropped disks in `dmesg`.
 - Roles for the Seagate (SMR) and the Samsung 512 GB SSD.
-- 6 TB purchase; GPU use.
+- ~~6 TB purchase~~ (2× 8 TB instead, see Update 2026-10-28); GPU use.
+
+## Update 2026-10-28: 2× IronWolf 8 TB (used) instead of the 6 TB
+
+**Purchase changed from the inventory.** Instead of the planned 6 TB drive(s),
+two used **Seagate IronWolf 8 TB** (ST8000VN004, CMR, 7200 rpm, FW SC60) were
+bought on 2026-10-25 from a private seller (2,500 kr each) and installed on
+2026-10-28. Plan: run them as a **mirror** (the "later ×2 as mirror" line
+above, at 8 TB). Filesystem and role are not decided yet.
+
+| | {ironwolf-serial-1} | {ironwolf-serial-2} |
+|---|---|---|
+| Model / DOM | ST8000VN004-3CP101 / 2023-12-01 | ST8000VN004-2M2101 / 2021-01-15 |
+| Power-on hours | 20,133 | 25,772 |
+| Power cycles | 69 | 94 |
+| Written | ~11.5 TB | ~34.8 TB |
+| Head-flying hours | 1,759 | 7,349 |
+| Temperature | 30 °C | 27 °C |
+| Last extended self-test (seller) | completed at 19,913 h | completed at 25,553 h |
+| Seagate warranty | none | expired 2024-04-19 |
+
+Both: SMART PASSED; 0 reallocated / pending / offline-uncorrectable /
+reported-uncorrect / UDMA CRC; empty SMART error log.
+
+Verified on the host:
+
+- Labels match the seller's serials and part numbers. The seller's two
+  `smartctl` dumps (2026-10-01) match the current values but were attached
+  to the opposite serials, and the stated TB written was swapped the same
+  way. Each drive's written total is about one full-disk write (~8 TB) above
+  the seller's figure, so they were probably zero-filled before the sale.
+- No partition table, filesystem, mdadm or ZFS label (`lsblk -f`,
+  `wipefs -n`, `fdisk -l`, `mdadm --examine`, `zdb -l` all empty); 12 raw
+  1 MiB samples across each drive all zero.
+- Fresh **extended self-tests started 2026-10-28 20:54 CET** on both
+  (~12 h, done around 08:30–09:00 CET 2026-10-29).
+- Already covered by monitoring: smartd's `DEVICESCAN` (ADR-0015) picks the
+  new disks up and mails root → Discord. It runs no scheduled self-tests
+  and has no temperature limits for any disk.
+
+Paths (letters shift, ADR-0009): `/dev/disk/by-id/ata-ST8000VN004-3CP101_{ironwolf-serial-1}`,
+`/dev/disk/by-id/ata-ST8000VN004-2M2101_{ironwolf-serial-2}`.
+
+No manufacturer warranty on either drive; recourse is the seller only. The
+mirror protects against one drive failing, not against deletion or
+corruption written to both, so the backup rules of ADR-0011 apply to
+whatever lands on it.
+
+Open items:
+
+- Check the extended self-test results (`smartctl -l selftest`) and save a
+  `smartctl -x` baseline for both.
+- Optional burn-in before use (destructive, drives are empty):
+  `badblocks -b 4096 -wsv -t 0xaa <by-id>`, about a day per pass; re-check
+  SMART afterwards.
+- Choose the mirror's filesystem and role (new ADR). ZFS would match the
+  rest of the host (sanoid, zed, scrubs, ADR-0008/0011).
+- Scheduled smartd self-tests (short daily, long monthly, staggered) and
+  `-W` temperature limits; better as per-disk lines or a `DEVICESCAN` change
+  for all disks.
