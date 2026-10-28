@@ -66,7 +66,10 @@ The default is no off-site copy, and `tank/archive` stays small.
    `[bulk]` share at `/tank/media`. After checking the copy, destroy
    `hgst/bulk` (ask first, CLAUDE.md rule 5). That frees ~400G on `hgst`.
 2. The remaining ~1 TiB from the old migration container: a new short-lived
-   **Read + List** SAS, `rclone copy` into `/tank/media/` on the host (as in
+   **Read + List (+ Delete for pruning)** SAS on `{azure-account}`
+   (portal: container → Generate SAS, account key, HTTPS only, 7 days; on
+   the host `read -rs u; rclone config update {azure-remote} sas_url "$u"
+   >/dev/null`), `rclone copy` into `/tank/media/` on the host (as in
    ADR-0011's update 2026-09-27, as a `systemd-run` unit), **in batches
    within the egress budget of §7**, not in one go. Network time is not the
    limit (~272 Mbit/s → ~100 GB in about an hour).
