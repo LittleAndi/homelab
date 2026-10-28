@@ -211,9 +211,38 @@ filesystem rules (`**`), so this is a convention.
 **Pushing:** from `~/work/<repo>` in the VM, outside the sandbox, with a
 per-repo GitHub deploy key (write); no account-wide token in the VM.
 
+## Update 2026-10-28: pushing via branches and PRs
+
+`main` is now protected by a ruleset (no deletion, no force-push, PR
+required, 0 approvals, no bypass). This replaces the per-repo deploy key
+and "reviewed before pushing" in the update above: the agent now pushes
+before review.
+
+- **Token:** per sandbox, fine-grained, one repo, Contents read/write only,
+  30 days; `sbx secret set github --sandbox <name>`, injected by the `sbx`
+  proxy. In `--clone` mode the agent's `origin` is GitHub, so it pushes a
+  branch itself. Without Pull requests permission it can't open or merge a
+  PR.
+- **Accepted for now (option A):** the token acts as the owner, so the
+  agent can also push to, delete or force-push any branch except `main`,
+  and create tags. A branch is public as soon as it is pushed, before any
+  check. Low risk here: the sandbox has no `site.env` and can't reach the
+  LAN or the tailnet. Option B, if autonomy grows: a bot account with
+  1 approval required on `main` and rulesets limiting it to `agent/**`,
+  plus gitleaks and the site-value check as required CI checks.
+- **Review on the workstation** before opening the PR: check the branch
+  out (pre-commit hooks read the working tree), then
+  `pre-commit run --from-ref origin/main --to-ref HEAD` and
+  `pre-commit run --hook-stage manual gitleaks-range` (the normal gitleaks
+  hook only scans staged changes).
+- `sbx` forwards the SSH agent by default; the VM has none, and it is never
+  reached with `ssh -A`.
+
 ## Open items
 
 - ~~Decide the workload.~~ Docker Sandboxes, 2026-10-28.
+- Renew each sandbox's GitHub token before it expires: `claude-homelab`
+  by 2026-11-27.
 - Try `sbx run claude --clone` on a first repo; measure memory, then keep
   2 GB or move to 3 GB.
 - ~~Add `{workstation-ip}` to `site.env` and `site.env.example`.~~ Done

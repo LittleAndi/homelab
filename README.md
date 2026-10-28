@@ -29,8 +29,10 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0016**: sandbox VM 111 deployed 2026-10-27, all isolation checks
   passed; tailnet allow-all narrowed to members; on the tailnet as
   `tag:sandbox` since 2026-10-28; workload is Docker Sandboxes (`sbx`,
-  Docker Engine removed). Left: trial `sbx run claude` at 2 GB, then keep
-  or grow to 3 GB; phone apps away from home; keep or drop the LAN SSH rule
+  Docker Engine removed); agent pushes branches with a per-sandbox token,
+  PRs from the workstation (`main` protected). Left: renew the
+  `claude-homelab` token by 2026-11-27; trial `sbx run claude` at 2 GB,
+  then keep or grow to 3 GB; phone apps away from home; keep or drop the LAN SSH rule
   (DHCP reservation for `{workstation-ip}` if kept).
 - **ADR-0015**: Discord notifications live 2026-10-26 (smartd, zed, failed
   backup units, Proxmox jobs); `default-matcher` (mail) disabled. Nothing
