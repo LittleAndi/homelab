@@ -13,6 +13,7 @@ repos:
         name: Detect hardcoded secrets (origin/main..HEAD)
         entry: gitleaks git --redact --verbose --log-opts=origin/main..HEAD
         stages: [manual]
+        always_run: true   # no staged files when reviewing a branch
   - repo: local
     hooks:
       - id: site-values
