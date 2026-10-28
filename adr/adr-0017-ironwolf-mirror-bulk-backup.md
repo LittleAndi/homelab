@@ -145,32 +145,45 @@ Holding a GB for a later free month pays off while
 8–9 on Cool, ~24 on Cold, ~87 on Archive. That's why the cheap tiers
 make the slow plan cheapest.
 
-**Plan (cheapest estimate):**
+**Measured 2026-10-28** (Azure Monitor metrics; `az login`, no keys): the
+old migration account is in **Sweden Central, LRS, all blobs Hot**:
+**3,852,795 blobs, 1,139 GB**. That matches the total minus the 400 GiB
+`tmp`, so `tmp` looks already deleted from Azure (to confirm in the rclone
+listing). The data includes code and `node_modules`, so files are small
+(~300 KB on average). That rules out re-tiering:
 
-1. **Delete `tmp` (400 GiB, already home) from the old container now**
-   (ask first). It's replaceable by ADR-0011 and costs 43–79 kr/month
-   (Cool/Hot) to keep. Removed: no need to wait for `tank`.
-2. **List the rest and prune.** Delete what isn't wanted in Azure
-   *before* re-tiering; deleting from Cool/Hot is free, from Archive it
-   costs the 180-day minimum.
-3. **Re-tier what's left to Archive** (`rclone settier Archive`, or `az
-   storage blob set-tier`; check first that it works through the crypt
-   remote).
-4. **Each month:** rehydrate ~95 GB to Hot (standard priority, up to
-   ~15 h), `rclone copy … --max-transfer 95G --cutoff-mode soft` into
-   `tank/media`, check, delete those blobs from Azure, log the row below.
-   About 12 months, done around 2027-10.
+| Per-file cost (3.85M files) | Cool | Cold | Archive |
+|---|---|---|---|
+| Re-tier (write ops) | 384 kr | 691 kr | 461 kr |
+| Read back (read ops) | 38 kr | 384 kr | **~23,000 kr** |
 
-The listing can change the plan. Recalculate with the real numbers if:
+Hot read ops for a full download: ~15 kr. Keeping it on Hot costs
+**~209 kr/month**, so a slow pull is expensive too:
 
-- **Any file is over ~95 GB.** It can't fit inside one month's free
-  allowance; the excess is paid whatever the tier, so pull such files on
-  their own, early.
-- **The data is tens of thousands of files.** Archive read ops (59.80 kr
-  per 10k) and write ops for re-tiering add up; Cold may come out
-  cheaper.
-- **The data isn't wanted much at all.** After pruning, a small remainder
-  may be cheapest pulled at once.
+| Hot: paid now + free months after | Estimate |
+|---|---|
+| All now (1,044 GB paid) | ~921 kr |
+| 759 GB + 3 months | ~778 kr |
+| **664 GB + 4 months** | **~765 kr** (cheapest) |
+| 474 GB + 6 months | ~792 kr |
+
+The curve is flat around 3–5 months; the real saving is pruning: every
+GB not downloaded saves up to 0.87 kr, plus its storage.
+
+**Plan (cheapest estimate, stays Hot):**
+
+1. **One rclone listing with real names** (new Read + List + Delete SAS;
+   ~3–4 GB of list responses, inside the month's free allowance). Find
+   `node_modules`, build output, code that's already on GitHub, and
+   anything else not wanted.
+2. **Delete that in Azure** (deletes are free on Hot; millions of small
+   files take hours but cost nothing). Ask first.
+3. **Pull the rest in one paid batch** of everything except the last
+   ~4 × 95 GB, then **95 GB per month** for the remainder (`--max-transfer
+   95G --cutoff-mode soft`). Delete each batch from Azure once it's checked
+   on `tank`, so storage stops being billed. Recalculate the split after
+   pruning (smaller remainder → fewer free months worth waiting for).
+4. Delete the container or account when it's empty (ask first).
 
 Other rules:
 
@@ -189,6 +202,7 @@ added in this ADR, no new Update section per batch.
 | Month | Batch | GB from Azure this month | Migration data home (cumulative) | Not home yet |
 |---|---|---|---|---|
 | 2026-09 | `tmp` (ADR-0011) | ~430 | ~430 GB (400 GiB) | ~1.1 TB |
+| 2026-10 | partial `az storage blob list` (stopped), metrics | <1 (list responses) | ~430 GB | 1,139 GB, 3.85M files |
 
 ## Alternatives considered
 
@@ -224,13 +238,13 @@ added in this ADR, no new Update section per batch.
 - Create `tank` and the datasets after the self-tests (and optional burn-in).
 - Move `hgst/bulk` → `tank/media`, repoint Samba, then destroy `hgst/bulk`
   (ask first).
-- Confirm the old migration account's region and tier (`az storage account
-  show`) and this month's egress (Azure cost view).
-- Delete `tmp` (400 GiB, already home) from the old container now (ask
-  first): 43–79 kr/month for a copy that's no longer needed.
-- New SAS for the old container; list it, prune, recalculate §7 with the
-  real sizes and file count, re-tier the rest (Archive by the estimate),
-  then pull in monthly 95 GB batches, logging each one.
+- ~~Confirm the old migration account's region and tier.~~ Done
+  2026-10-28: Sweden Central, LRS, Hot, 3.85M blobs, 1,139 GB.
+- Check this month's egress in the Azure cost view.
+- Confirm `tmp` is gone from the old container (metrics suggest so).
+- New Read + List + Delete SAS; rclone listing; prune in Azure (ask
+  first); recalculate the split; pull (paid batch + ~4 free months, §7),
+  logging each batch. The container stays Hot.
 - Sort irreplaceable data into `tank/archive`; then choose the Azure tier and
   extend the off-site sync to `archive/`.
 - Delete the old migration container or account once everything is home
