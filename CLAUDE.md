@@ -35,10 +35,10 @@ relevant ADR before changing anything.
 7. After `terraform apply`, a `site.env` change or a new Z-Stick backup, run
    `scripts/backup-local.sh`.
 8. **`main` is protected: branch and PR.** Never push to `main`. Work on a
-   branch, push it, `gh pr create`. Branches pushed by the `sbx` agent
-   (ADR-0016) get `pre-commit run --from-ref origin/main --to-ref
-   origin/<branch>` here before merging; the sandbox can't run the
-   site-value check.
+   branch, push it, `gh pr create`. A branch pushed by the `sbx` agent
+   (ADR-0016) is checked out here and checked before its PR: `git fetch
+   origin && git switch <branch>`, `pre-commit run --from-ref origin/main
+   --to-ref HEAD`, `pre-commit run --hook-stage manual gitleaks-range`.
 
 ## Access from this machine (WSL)
 

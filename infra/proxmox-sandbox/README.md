@@ -62,18 +62,24 @@ scripts, no Terraform.
 - One sandbox per repo, started from that repo's folder. Never from `~`.
 - `--clone`: the agent works on a private copy; its commits also show up as
   the `sandbox-<name>` remote in `~/work/<repo>`.
-- **The agent pushes a branch; you open and merge the PR.** `main` is
-  protected (PR required). Per sandbox, a fine-grained token for that one
-  repo, **Contents: read/write only** (no Pull requests, so it can't merge
-  its own PR), 30 days:
+- **The agent pushes a branch; you open and merge the PR.** In `--clone`
+  mode the agent's copy has GitHub as `origin`. `main` is protected (PR
+  required). Per sandbox, a fine-grained token for that one repo,
+  **Contents: read/write only** (no Pull requests, so it can't open or
+  merge one), 30 days. After the first `sbx run` (it applies to a running
+  sandbox):
   ```
   sbx secret set github --sandbox claude-<repo>   # paste when prompted
   ```
   The `sbx` proxy injects it; the sandbox only sees a placeholder.
-- Review on the workstation before merging (the sandbox has no `site.env`,
-  so the site-value hook can't run there):
+  The token is you: it can also push to, delete or force-push any branch but
+  `main`, and create tags (accepted, ADR-0016).
+- Review **on the workstation** (it has `site.env`; the sandbox doesn't):
   ```
-  git fetch origin && pre-commit run --from-ref origin/main --to-ref origin/<branch>
+git fetch origin && git switch <branch>      # check it out: hooks read the working tree
+pre-commit run --from-ref origin/main --to-ref HEAD
+pre-commit run --hook-stage manual gitleaks-range
+gh pr create --head <branch>                 # the agent can't; then review and merge
   ```
 - Never `ssh -A` into the VM: `sbx` forwards the SSH agent into sandboxes.
 - One running sandbox at a time at 2 GB (`sbx stop` the others);
@@ -86,10 +92,12 @@ scripts, no Terraform.
 ssh root@pve qm start 111        # when needed
 ssh sandbox@sandbox.{tailnet}.ts.net   # or sandbox@192.168.1.26 on the LAN
 cd ~/work/<repo> && sbx run claude --clone
-gh pr create --head <branch>     # after the agent pushed; review, then merge
 sbx ls / sbx stop <name> / sbx rm <name>
 ssh root@pve qm shutdown 111     # when done
 ```
+
+The agent's branch is then reviewed and turned into a PR on the workstation
+(above).
 
 Memory: a sandbox gets ~1 GiB by default in the 2 GB VM; `--memory 1400m`
 is the most that leaves the VM room. `sbx policy ls` shows what the

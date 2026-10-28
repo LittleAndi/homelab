@@ -5,6 +5,14 @@ repos:
     rev: v8.27.2
     hooks:
       - id: gitleaks
+      # Reviewing a branch (e.g. pushed by the sbx agent): the hook above
+      # only scans staged changes, so scan the branch's commits instead.
+      #   pre-commit run --hook-stage manual gitleaks-range
+      - id: gitleaks
+        alias: gitleaks-range
+        name: Detect hardcoded secrets (origin/main..HEAD)
+        entry: gitleaks git --redact --verbose --log-opts=origin/main..HEAD
+        stages: [manual]
   - repo: local
     hooks:
       - id: site-values
