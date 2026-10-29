@@ -279,6 +279,12 @@ added in this ADR, no new Update section per batch.
   `[tank/archive]` → `template_data` (24/30/6). Checked with
   `sanoid --take-snapshots --readonly --verbose`.
 - Monthly scrub and zed alerts cover `tank` with no change (§6).
+- **`tank/nosnap`** (`recordsize=1M`, `com.sun:auto-snapshot=false`) added
+  for data that should never be snapshotted: replaceable or churning
+  files where snapshots would only hold on to deleted or overwritten
+  blocks. Not in `sanoid.conf`, no off-site. Sanoid entries here aren't
+  recursive, so children of `tank/media` or `tank/archive` would also go
+  unsnapshotted: create new datasets as siblings, or add them explicitly.
 
 ## Alternatives considered
 
