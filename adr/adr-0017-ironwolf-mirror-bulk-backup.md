@@ -235,8 +235,9 @@ Storage for both, today: ~259 kr/month.
   plus small folders.
 
 Revised joint estimate: **~1,044 kr** keeping the two VeraCrypt containers,
-**~740 kr** without them (before tier changes; see the comparison in chat
-2026-10-29: ~409–688 kr with Archive for large files, not decided yet).
+**~740 kr** without them (no tier changes. Moving large files to Archive
+and 1–100 MB files to Cool/Cold was estimated at ~409–688 kr over 11–16
+months, 2026-10-29; not decided yet).
 
 Other rules:
 
