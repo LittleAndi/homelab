@@ -392,10 +392,12 @@ in `hgst/bulk` isn't recorded from here on (ADR-0017, "Untracked areas").
   Update). Left: confirm the next 03:00 UTC run is incremental. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
-- Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
-  files (rclone wrote them as root).
-- Bulk: delete `tmp` from Azure with a short-lived SAS that has Delete
-  permission, once satisfied with the local copy.
+- ~~Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
+  files (rclone wrote them as root).~~ Done (found owned by `{user}`,
+  2026-10-28).
+- ~~Bulk: delete `tmp` from Azure with a short-lived SAS that has Delete
+  permission, once satisfied with the local copy.~~ Done: no longer in the
+  container (listing 2026-10-28, ADR-0017 §7).
 - Remove `/root/.config/rclone/rclone.conf` from the host, unless it's kept
   for §3.
 - Swap the `nic0` cable (Cat5e or better) and confirm
