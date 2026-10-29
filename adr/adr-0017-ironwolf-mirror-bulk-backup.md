@@ -177,7 +177,8 @@ GB not downloaded saves up to 0.87 kr, plus its storage.
 over 15 GB (so no file breaks the 95 GB batch cap); 3.75M files under 1 MB
 hold only 55 GB. Build output and package folders (`node_modules`,
 `bin/obj`, NuGet `packages`, `.git`, `dist`…) are 1.61M files / 43 GB;
-game libraries 42 GB (deleted the same day). Estimate after that: ~710 kr.
+game libraries 42 GB. Both deleted 2026-10-28/29 (filters kept on the host).
+Estimate after that: **~675 kr** (Hot storage now ~193 kr/month).
 Folder names stay out of the repo.
 
 **Plan (cheapest estimate, stays Hot):**
@@ -214,6 +215,7 @@ added in this ADR, no new Update section per batch.
 | 2026-09 | `tmp` (ADR-0011) | ~430 | ~430 GB (400 GiB) | ~1.1 TB |
 | 2026-10 | partial `az storage blob list` (stopped), metrics | <1 (list responses) | ~430 GB | 1,139 GB, 3.85M files |
 | 2026-10 | full decrypted listing (`rclone lsf -R --fast-list`, kept on the host); **deleted** game libraries (7,127 files, 42 GB) | ~4 (list responses) | ~430 GB | 1,092 GB, 3.85M files |
+| 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
 
 ## Alternatives considered
 
