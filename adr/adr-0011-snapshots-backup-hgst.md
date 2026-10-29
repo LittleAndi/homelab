@@ -354,14 +354,16 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - Progress lines were missing from the log: rclone logs stats at INFO.
   Fixed with `--stats-log-level NOTICE` (deployed after this run).
 
-## Update 2026-10-28: bulk moves to the IronWolf mirror (ADR-0017)
+## Update 2026-10-28/29: the IronWolf mirror (ADR-0017)
 
-Two 8 TB drives came instead of the 6 TB (ADR-0009). Under ADR-0017,
-`hgst/bulk` moves to `tank/media` on the new mirror and the Samba `[bulk]`
-share follows it; `hgst` then keeps only `hgst/backup`. The rest of the
-migration data (~1 TiB) also goes to `tank/media`, with no off-site copy.
-Only `tank/archive` (irreplaceable bulk) gets an off-site copy, with the
-§3 mechanism.
+Two 8 TB drives came instead of the 6 TB (ADR-0009) and became the mirror
+`tank` (ADR-0017). The remaining migration data from Azure goes to
+`tank/media`, with no off-site copy; only `tank/archive` (irreplaceable
+bulk) gets one, with the §3 mechanism.
+
+`hgst/bulk` and its `[bulk]` share **stay for now** (decided 2026-10-29);
+moving bulk to `tank` and destroying `hgst/bulk` is on hold. What's stored
+in `hgst/bulk` isn't recorded from here on (ADR-0017, "Untracked areas").
 
 ## Open items
 
