@@ -1,6 +1,6 @@
 # ADR-0009: Storage Expansion — LSI SAS 9211-8i HBA; Disk Inventory
 
-**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
+**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); ZFS mirror `tank` created 2026-10-29 (ADR-0017). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate = pool `scratch` since 2026-10-29; Samsung SSD still without a role.
 **Date:** 2026-09-21
 
 ## Context
@@ -123,5 +123,91 @@ Open items:
 - Check the HBA heatsink temperature under sustained use. The SAS3008 is
   built for server airflow; overheating shows up as `mpt3sas` resets and
   dropped disks in `dmesg`.
-- Roles for the Seagate (SMR) and the Samsung 512 GB SSD.
-- 6 TB purchase; GPU use.
+- ~~Role for the Seagate (SMR)~~ (`scratch`, 2026-10-29); role for the Samsung 512 GB SSD.
+- ~~6 TB purchase~~ (2× 8 TB instead, see Update 2026-10-28); GPU use.
+
+## Update 2026-10-28: 2× IronWolf 8 TB (used) instead of the 6 TB
+
+**Purchase changed from the inventory.** Instead of the planned 6 TB drive(s),
+two used **Seagate IronWolf 8 TB** (ST8000VN004, CMR, 7200 rpm, FW SC60) were
+bought on 2026-10-25 from a private seller (2,500 kr each) and installed on
+2026-10-28. Plan: run them as a **mirror** (the "later ×2 as mirror" line
+above, at 8 TB). Filesystem and role are not decided yet.
+
+| | {ironwolf-serial-1} | {ironwolf-serial-2} |
+|---|---|---|
+| Model / DOM | ST8000VN004-3CP101 / 2023-12-01 | ST8000VN004-2M2101 / 2021-01-15 |
+| Power-on hours | 20,133 | 25,772 |
+| Power cycles | 69 | 94 |
+| Written | ~11.5 TB | ~34.8 TB |
+| Head-flying hours | 1,759 | 7,349 |
+| Temperature | 30 °C | 27 °C |
+| Last extended self-test (seller) | completed at 19,913 h | completed at 25,553 h |
+| Seagate warranty | none | expired 2024-04-19 |
+
+Both: SMART PASSED; 0 reallocated / pending / offline-uncorrectable /
+reported-uncorrect / UDMA CRC; empty SMART error log.
+
+Verified on the host:
+
+- Labels match the seller's serials and part numbers. The seller's two
+  `smartctl` dumps (2026-10-01) match the current values but were attached
+  to the opposite serials, and the stated TB written was swapped the same
+  way. Each drive's written total is about one full-disk write (~8 TB) above
+  the seller's figure, so they were probably zero-filled before the sale.
+- No partition table, filesystem, mdadm or ZFS label (`lsblk -f`,
+  `wipefs -n`, `fdisk -l`, `mdadm --examine`, `zdb -l` all empty); 12 raw
+  1 MiB samples across each drive all zero.
+- Fresh **extended self-tests started 2026-10-28 20:54 CET** on both
+  (~12 h, done around 08:30–09:00 CET 2026-10-29).
+- Already covered by monitoring: smartd's `DEVICESCAN` (ADR-0015) picks the
+  new disks up and mails root → Discord. It runs no scheduled self-tests
+  and has no temperature limits for any disk.
+
+Paths (letters shift, ADR-0009): `/dev/disk/by-id/ata-ST8000VN004-3CP101_{ironwolf-serial-1}`,
+`/dev/disk/by-id/ata-ST8000VN004-2M2101_{ironwolf-serial-2}`.
+
+No manufacturer warranty on either drive; recourse is the seller only. The
+mirror protects against one drive failing, not against deletion or
+corruption written to both, so the backup rules of ADR-0011 apply to
+whatever lands on it.
+
+Open items:
+
+- ~~Check the extended self-test results and save a `smartctl -x`
+  baseline for both.~~ Done 2026-10-29: both "Completed without error"
+  (at 20,143 h and 25,783 h); 0 reallocated / pending / uncorrectable /
+  reported-uncorrect / CRC; 37–39 °C during the test (max 41/44 °C).
+  Baselines in `/root/smart-baseline/` on the host. Pool: ADR-0017.
+- ~~Optional burn-in before use~~ (`badblocks -wsv`, days per drive).
+  **Skipped** (decided 2026-10-29): clean SMART histories and two full read
+  tests; the ZFS mirror (checksums, monthly scrub, redundancy) catches a weak
+  drive, and the migration data stays in Azure until it's home. Not losing
+  October's free egress (ADR-0017 §7) tipped it.
+- ~~Choose the mirror's filesystem and role (new ADR).~~ Decided
+  2026-10-28 in ADR-0017: ZFS mirror `tank` for bulk media and backups.
+- Scheduled smartd self-tests (short daily, long monthly, staggered) and
+  `-W` temperature limits; better as per-disk lines or a `DEVICESCAN` change
+  for all disks.
+
+## Update 2026-10-29: Seagate ST1000LM035 → pool `scratch`
+
+The Seagate ({seagate-serial}, SMR, empty, healthy; ADR-0009 update
+2026-10-20) is now a single-disk pool **`scratch`** with one dataset,
+`scratch/staging`: a landing place for downloads before they're sorted
+onto `tank` (ADR-0017).
+
+```bash
+zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa \
+  scratch /dev/disk/by-id/ata-ST1000LM035-1RK172_{seagate-serial}
+zfs create scratch/staging
+```
+
+- Not for data that matters: an old SMR laptop drive with no redundancy.
+  Data on it is either still in Azure or accepted as single-copy. Its
+  contents aren't recorded here (ADR-0017, "Untracked areas").
+- Not in Sanoid, not replicated. The monthly scrub (cron) and smartd
+  (`DEVICESCAN`) cover it.
+- The Samsung 512 GB SSD still has no role (old Windows 8 install on it,
+  Wear_Leveling 57).
+

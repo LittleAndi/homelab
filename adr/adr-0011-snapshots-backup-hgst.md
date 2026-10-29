@@ -354,6 +354,17 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
 - Progress lines were missing from the log: rclone logs stats at INFO.
   Fixed with `--stats-log-level NOTICE` (deployed after this run).
 
+## Update 2026-10-28/29: the IronWolf mirror (ADR-0017)
+
+Two 8 TB drives came instead of the 6 TB (ADR-0009) and became the mirror
+`tank` (ADR-0017). The remaining migration data from Azure goes to
+`tank/media`, with no off-site copy; only `tank/archive` (irreplaceable
+bulk) gets one, with the §3 mechanism.
+
+`hgst/bulk` and its `[bulk]` share **stay for now** (decided 2026-10-29);
+moving bulk to `tank` and destroying `hgst/bulk` is on hold. What's stored
+in `hgst/bulk` isn't recorded from here on (ADR-0017, "Untracked areas").
+
 ## Open items
 
 - Confirm `daily_hour = 1` is in `/etc/sanoid/sanoid.conf`.
@@ -381,10 +392,12 @@ and `azure-sync-k8s.timer`, daily at **03:00 UTC**.
   Update). Left: confirm the next 03:00 UTC run is incremental. Until it runs,
   keep `{old-stack-dir}` and the migration dump (ADR-0010).
 - Optional: tighten the 777 PVC directory on the host.
-- Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
-  files (rclone wrote them as root).
-- Bulk: delete `tmp` from Azure with a short-lived SAS that has Delete
-  permission, once satisfied with the local copy.
+- ~~Bulk: `chown -R {user}:{user} /hgst/bulk` so the Samba user owns the copied
+  files (rclone wrote them as root).~~ Done (found owned by `{user}`,
+  2026-10-28).
+- ~~Bulk: delete `tmp` from Azure with a short-lived SAS that has Delete
+  permission, once satisfied with the local copy.~~ Done: no longer in the
+  container (listing 2026-10-28, ADR-0017 §7).
 - Remove `/root/.config/rclone/rclone.conf` from the host, unless it's kept
   for §3.
 - Swap the `nic0` cable (Cat5e or better) and confirm

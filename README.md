@@ -15,7 +15,7 @@ When a decision changes, update its **Status** and add a dated
 | [0006](adr/adr-0006-container-platform.md) | Podman | Superseded by 0008 |
 | [0007](adr/adr-0007-application-stack.md) | Compose stack, Tailscale+Caddy, observability | Superseded by 0010 |
 | [0008](adr/adr-0008-proxmox-zfs-microk8s.md) | Proxmox VE + ZFS + 5-VM MicroK8s | Accepted — deployed 2026-09-21; workers 4 → 3 GB 2026-10-27 (cluster 15 GB) |
-| [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20 |
+| [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20; 2× used IronWolf 8 TB (instead of 6 TB) installed 2026-10-28, role in 0017 |
 | [0010](adr/adr-0010-nextcloud-microk8s-deployment.md) | Nextcloud on MicroK8s: like-for-like move, Helm chart + own MariaDB, Tailscale operator | **Accepted — migrated 2026-09-26; on 35.0.2 (PHP 8.5.12) since 2026-10-23** |
 | [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26; Azure sync since 2026-10-26 |
 | [0012](adr/adr-0012-home-assistant-vm.md) | Home Assistant OS VM (110) with Z-Wave + Zigbee sticks; host scripts, NFS backups | Accepted — **VM deployed 2026-10-24** (HA 2026.10.3, Tailscale Serve, NFS backups); radios not set up yet |
@@ -23,9 +23,23 @@ When a decision changes, update its **Status** and add a dated
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
 | [0016](adr/adr-0016-docker-sandbox-vm.md) | Sandbox VM (111) for Docker Sandboxes (`sbx`, microVMs): 2 GB, on demand, firewalled off the LAN and tailnet | Accepted — deployed 2026-10-27 |
+| [0017](adr/adr-0017-ironwolf-mirror-bulk-backup.md) | IronWolf 8 TB ZFS mirror `tank` for bulk media and backups; off-site per dataset (only `tank/archive`) | Accepted — **`tank` created 2026-10-29** |
 
 ## Open items
 
+- **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
+  `backup`) decided 2026-10-28; created 2026-10-29 (datasets, Sanoid). `tank/nosnap` + `[nosnap]` share added;
+  `hgst/bulk` + `[bulk]` kept for now. Left: old container is Hot, 1,139 GB in 3.85M files (~209
+  kr/month): listed 2026-10-28; games + build output deleted (now 1,052 GB,
+  2.33M files); prune more if wanted, then a paid batch + ~4 free months,
+  est. ~675 kr alone; with the second account `{docs-azure-account}`
+  (706 GB, mostly Cool, unencrypted; 170 GB duplicate pictures to delete
+  after an MD5 check; one 215 GB file left to pull from spare free
+  allowance) ~740–1,044 kr jointly
+  (ADR-0017 §7, log each batch);
+  sort irreplaceable data into `tank/archive`, pick its Azure tier, extend
+  the off-site sync; delete the old migration container (ask first);
+  decide what goes in `tank/backup`.
 - **ADR-0016**: sandbox VM 111 deployed 2026-10-27, all isolation checks
   passed; tailnet allow-all narrowed to members; on the tailnet as
   `tag:sandbox` since 2026-10-28; workload is Docker Sandboxes (`sbx`,
@@ -70,9 +84,13 @@ When a decision changes, update its **Status** and add a dated
   the host, 27 security. Maintenance window: `apt full-upgrade`, reboot if
   needed (ask first), check cluster/HA/timers afterwards.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
-  passed an extended self-test. Left: check HBA heatsink temperature; roles
-  for the Seagate 1TB and Samsung 512GB SSD; 6TB purchase; GPU use. Disk
+  passed an extended self-test. Left: check HBA heatsink temperature; role
+  for the Samsung 512GB SSD (Seagate = `scratch` since 2026-10-29); GPU use. Disk
   letters shifted with the HBA: use `/dev/disk/by-id/…`, not `sdX`.
+- **ADR-0009 (IronWolf 8 TB, 2026-10-28)**: two used ST8000VN004 installed,
+  verified empty, SMART clean; extended self-tests passed 2026-10-29,
+  baselines saved (burn-in skipped). Left: scheduled smartd self-tests / temperature limits.
+  (Role: ADR-0017.)
 
 ## Using this repo
 
