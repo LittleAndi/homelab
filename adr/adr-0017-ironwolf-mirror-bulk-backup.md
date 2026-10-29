@@ -226,13 +226,17 @@ Storage for both, today: ~259 kr/month.
   have one; reading it is a listing, not a download), and matching blobs
   are deleted here. Files without an MD5 or with a mismatch are pulled.
 - **429.5 GB are two 200 GiB VeraCrypt containers**, Cool, that are *not*
-  the two already on `hgst/bulk` (different names, same fixed size). Keep or
-  delete: open.
+  the two already on `hgst/bulk` (different names, same fixed size).
+  **Decided 2026-10-29: pull both to `scratch/staging` (single copy is
+  accepted, ADR-0009) and delete them from Azure.** demo-1 in October's
+  free allowance, demo-2 on the first day of the next billing period
+  (~260 kr together, vs ~342 kr both at once).
 - The rest (~107 GB) is mostly video recordings (75 GB, 62 GB of it Cold)
   plus small folders.
 
 Revised joint estimate: **~1,044 kr** keeping the two VeraCrypt containers,
-**~740 kr** without them.
+**~740 kr** without them (before tier changes; see the comparison in chat
+2026-10-29: ~409–688 kr with Archive for large files, not decided yet).
 
 Other rules:
 
