@@ -195,8 +195,7 @@ Open items:
 The Seagate ({seagate-serial}, SMR, empty, healthy; ADR-0009 update
 2026-10-20) is now a single-disk pool **`scratch`** with one dataset,
 `scratch/staging`: a landing place for downloads before they're sorted
-onto `tank` (ADR-0017). First use: `demo-1.hc` from the second old Azure
-account.
+onto `tank` (ADR-0017).
 
 ```bash
 zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa \
@@ -205,9 +204,8 @@ zfs create scratch/staging
 ```
 
 - Not for data that matters: an old SMR laptop drive with no redundancy.
-  Data on it is either still in Azure or accepted as single-copy.
-  Accepted 2026-10-29: the two VeraCrypt containers `demo-1.hc` and
-  `demo-2.hc` live only here (the goal is getting them out of Azure).
+  Data on it is either still in Azure or accepted as single-copy. Its
+  contents aren't recorded here (ADR-0017, "Untracked areas").
 - Not in Sanoid, not replicated. The monthly scrub (cron) and smartd
   (`DEVICESCAN`) cover it.
 - The Samsung 512 GB SSD still has no role (old Windows 8 install on it,

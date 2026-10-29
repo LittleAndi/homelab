@@ -226,20 +226,17 @@ Storage for both, today: ~259 kr/month.
   the MD5 Azure stores for these blobs (35,437 of 35,442 and 2,115 of 2,138
   have one; reading it is a listing, not a download), and matching blobs
   are deleted here. Files without an MD5 or with a mismatch are pulled.
-- **429.5 GB are two 200 GiB VeraCrypt containers**, Cool, that are *not*
-  the two already on `hgst/bulk` (different names, same fixed size).
-  **Decided 2026-10-29: pull both to `scratch/staging` (single copy is
-  accepted, ADR-0009) and delete them from Azure.** demo-1 in October's
-  free allowance. **demo-2 only from leftover free allowance**, in pieces:
-  `rclone cat … --offset <current size> --count <free bytes> >> demo-2.hc`
+- **429.5 GB are two large files** (Cool) in the `tmp` container, pulled
+  out of Azure into the untracked areas (see "Untracked areas" below).
+  The second is pulled **only from leftover free allowance**, in pieces:
+  `rclone cat … --offset <current size> --count <free bytes> >> <file>`
   (resumable; the next offset is the file's size), lowest priority after
-  the planned batches. Done when the size is 214,748,364,800 and it mounts
-  in VeraCrypt; then delete it from Azure (~21 kr/month on Cool until
-  then).
+  the planned batches, and deleted from Azure once complete (~21 kr/month
+  on Cool until then).
 - The rest (~107 GB) is mostly video recordings (75 GB, 62 GB of it Cold)
   plus small folders.
 
-Revised joint estimate: **~1,044 kr** keeping the two VeraCrypt containers,
+Revised joint estimate: **~1,044 kr** pulling the two large files,
 **~740 kr** without them (no tier changes. Moving large files to Archive
 and 1–100 MB files to Cool/Cold was estimated at ~409–688 kr over 11–16
 months, 2026-10-29; not decided yet).
@@ -265,8 +262,7 @@ added in this ADR, no new Update section per batch.
 | 2026-10 | full decrypted listing (`rclone lsf -R --fast-list`, kept on the host); **deleted** game libraries (7,127 files, 42 GB) | ~4 (list responses) | ~430 GB | 1,092 GB, 3.85M files |
 | 2026-10 | listing of `{docs-azure-account}` (+ MD5 metadata for two folders) | <0.1 | — | — |
 | 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
-| 2026-10 | `demo-1.hc` (second account, Cool) → `scratch/staging`, 214,748,364,800 bytes, 0 errors (2026-10-29 02:10–04:32). **October total ~234 GB** (~19 GB before it, Azure Monitor `Egress`): ~134 GB billed, est. ~137 kr incl. Cool retrieval | ~215 | — | second account: demo-2 + ~107 GB + 170 GB duplicates |
-| 2026-10 | `demo-1.hc` **deleted from Azure** 2026-10-29 by the user (only copy now `tank/nosnap`) | 0 | — | second account: demo-2 (215 GB) + ~107 GB + 170 GB duplicates |
+| 2026-10 | first large file from the second account (Cool, 215 GB; pulled, then deleted from Azure). **October total ~234 GB** (~19 GB before it, Azure Monitor `Egress`): ~134 GB billed, est. ~137 kr incl. Cool retrieval | ~215 | — | second account: 1 large file (215 GB) + ~107 GB + 170 GB duplicates |
 
 ## Update 2026-10-29: `tank` created
 
@@ -289,11 +285,13 @@ added in this ADR, no new Update section per batch.
 - **Samba share `[nosnap]`** → `/tank/nosnap`, same settings as `[bulk]`
   (ADR-0011 §4: `valid users = {user}`, SMB3, LAN + tailnet only;
   `smb.conf.bak-2026-10-29` on the host). Directory owned by `{user}`.
-- The VeraCrypt containers `demo-1` (from `scratch`), `demo-3` and `demo-4`
-  (from `hgst/bulk`) moved to `tank/nosnap` (copy, `cmp`, then delete).
-  **`hgst/bulk` and its `[bulk]` share stay for now** (decided 2026-10-29),
-  empty; the ADR-0011 plan to move bulk media to `tank/media` and destroy
-  `hgst/bulk` is on hold.
+- **`hgst/bulk` and its `[bulk]` share stay for now** (decided
+  2026-10-29); the ADR-0011 plan to move bulk media to `tank/media` and
+  destroy `hgst/bulk` is on hold.
+- **Untracked areas** (decided 2026-10-29): what's stored in `scratch`,
+  `hgst/bulk` and `tank/nosnap` is not recorded in this repo. Only the
+  areas themselves (pools, datasets, shares) and Azure egress for
+  anything pulled into them are.
 
 ## Alternatives considered
 
