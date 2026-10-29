@@ -1,6 +1,6 @@
 # ADR-0017: IronWolf 8 TB ZFS Mirror for Bulk Media and Backups; Selective Off-Site
 
-**Status:** Accepted — pool not created yet (waits for the self-tests, ADR-0009 update 2026-10-28)
+**Status:** Accepted — `tank` created 2026-10-29 (datasets + Sanoid); data not moved in yet
 **Date:** 2026-10-28
 
 ## Context
@@ -267,6 +267,19 @@ added in this ADR, no new Update section per batch.
 | 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
 | 2026-10 | `demo-1.hc` (second account, Cool) → `scratch/staging`, 214,748,364,800 bytes, 0 errors (2026-10-29 02:10–04:32). **October total ~234 GB** (~19 GB before it, Azure Monitor `Egress`): ~134 GB billed, est. ~137 kr incl. Cool retrieval | ~215 | — | second account: demo-2 + ~107 GB + 170 GB duplicates |
 
+## Update 2026-10-29: `tank` created
+
+- Both extended self-tests "Completed without error" (ADR-0009); drives
+  re-checked empty (no signatures, partitions or ZFS labels) just before.
+- `zpool create` as in §1 (by-id, `ashift=12`): mirror-0 ONLINE, 7.14T
+  available. Datasets as in §2: `tank/media` and `tank/archive`
+  (`recordsize=1M`), `tank/backup` (128K).
+- Sanoid (`/etc/sanoid/sanoid.conf`, backup `sanoid.conf.bak-2026-10-29`):
+  `[tank/media]` → new `template_media` (daily 7, monthly 3, no hourly),
+  `[tank/archive]` → `template_data` (24/30/6). Checked with
+  `sanoid --take-snapshots --readonly --verbose`.
+- Monthly scrub and zed alerts cover `tank` with no change (§6).
+
 ## Alternatives considered
 
 - **mdadm or btrfs mirror.** Rejected: everything else on the host is ZFS
@@ -298,7 +311,8 @@ added in this ADR, no new Update section per batch.
 
 ## Open items
 
-- Create `tank` and the datasets after the self-tests (no burn-in).
+- ~~Create `tank` and the datasets after the self-tests (no burn-in).~~ Done
+  2026-10-29 (see Update).
 - Move `hgst/bulk` → `tank/media`, repoint Samba, then destroy `hgst/bulk`
   (ask first).
 - ~~Confirm the old migration account's region and tier.~~ Done

@@ -1,6 +1,6 @@
 # ADR-0009: Storage Expansion — LSI SAS 9211-8i HBA; Disk Inventory
 
-**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); role decided in ADR-0017 (ZFS mirror `tank`, not created yet). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate = pool `scratch` since 2026-10-29; Samsung SSD still without a role.
+**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); ZFS mirror `tank` created 2026-10-29 (ADR-0017). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate = pool `scratch` since 2026-10-29; Samsung SSD still without a role.
 **Date:** 2026-09-21
 
 ## Context
@@ -174,8 +174,11 @@ whatever lands on it.
 
 Open items:
 
-- Check the extended self-test results (`smartctl -l selftest`) and save a
-  `smartctl -x` baseline for both.
+- ~~Check the extended self-test results and save a `smartctl -x`
+  baseline for both.~~ Done 2026-10-29: both "Completed without error"
+  (at 20,143 h and 25,783 h); 0 reallocated / pending / uncorrectable /
+  reported-uncorrect / CRC; 37–39 °C during the test (max 41/44 °C).
+  Baselines in `/root/smart-baseline/` on the host. Pool: ADR-0017.
 - ~~Optional burn-in before use~~ (`badblocks -wsv`, days per drive).
   **Skipped** (decided 2026-10-29): clean SMART histories and two full read
   tests; the ZFS mirror (checksums, monthly scrub, redundancy) catches a weak

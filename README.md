@@ -23,12 +23,12 @@ When a decision changes, update its **Status** and add a dated
 | [0014](adr/adr-0014-public-git-repo.md) | Public git repo `homelab`; site values in gitignored `site.env`, placeholders in git; pre-commit guard rails | Accepted — **public since 2026-10-24** (MIT) |
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
 | [0016](adr/adr-0016-docker-sandbox-vm.md) | Sandbox VM (111) for Docker Sandboxes (`sbx`, microVMs): 2 GB, on demand, firewalled off the LAN and tailnet | Accepted — deployed 2026-10-27 |
-| [0017](adr/adr-0017-ironwolf-mirror-bulk-backup.md) | IronWolf 8 TB ZFS mirror `tank` for bulk media and backups; off-site per dataset (only `tank/archive`) | Accepted — pool not created yet |
+| [0017](adr/adr-0017-ironwolf-mirror-bulk-backup.md) | IronWolf 8 TB ZFS mirror `tank` for bulk media and backups; off-site per dataset (only `tank/archive`) | Accepted — **`tank` created 2026-10-29** |
 
 ## Open items
 
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
-  `backup`) decided 2026-10-28. Left: create after the self-tests; move
+  `backup`) decided 2026-10-28; created 2026-10-29 (datasets, Sanoid). Left: move
   `hgst/bulk` → `tank/media` and repoint Samba, then destroy `hgst/bulk`
   (ask first); old container is Hot, 1,139 GB in 3.85M files (~209
   kr/month): listed 2026-10-28; games + build output deleted (now 1,052 GB,
@@ -89,9 +89,8 @@ When a decision changes, update its **Status** and add a dated
   for the Samsung 512GB SSD (Seagate = `scratch` since 2026-10-29); GPU use. Disk
   letters shifted with the HBA: use `/dev/disk/by-id/…`, not `sdX`.
 - **ADR-0009 (IronWolf 8 TB, 2026-10-28)**: two used ST8000VN004 installed,
-  verified empty, SMART clean; extended self-tests started 2026-10-28
-  20:54 CET. Left: check results + save `smartctl -x` baseline (burn-in
-  skipped 2026-10-29); scheduled smartd self-tests / temperature limits.
+  verified empty, SMART clean; extended self-tests passed 2026-10-29,
+  baselines saved (burn-in skipped). Left: scheduled smartd self-tests / temperature limits.
   (Role: ADR-0017.)
 
 ## Using this repo
