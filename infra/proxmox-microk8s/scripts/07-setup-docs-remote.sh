@@ -8,8 +8,9 @@
 # top of egress, so plan downloads with ADR-0017 §7.
 #   - Paste the portal's "Blob service SAS URL" from an *account* SAS
 #     (Storage account -> Shared access signature: service Blob, resource
-#     types Container + Object, Read + List (+ Delete when pruning), HTTPS
-#     only, short expiry). It isn't echoed or written to shell history.
+#     types Service + Container + Object -- Service is needed to list the
+#     containers --, Read + List (+ Delete when pruning), HTTPS only, short
+#     expiry). It isn't echoed or written to shell history.
 #   - The test lists the containers only (no data download).
 set -euo pipefail
 
