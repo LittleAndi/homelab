@@ -285,6 +285,14 @@ added in this ADR, no new Update section per batch.
   blocks. Not in `sanoid.conf`, no off-site. Sanoid entries here aren't
   recursive, so children of `tank/media` or `tank/archive` would also go
   unsnapshotted: create new datasets as siblings, or add them explicitly.
+- **Samba share `[nosnap]`** → `/tank/nosnap`, same settings as `[bulk]`
+  (ADR-0011 §4: `valid users = {user}`, SMB3, LAN + tailnet only;
+  `smb.conf.bak-2026-10-29` on the host). Directory owned by `{user}`.
+- The VeraCrypt containers `demo-1` (from `scratch`), `demo-3` and `demo-4`
+  (from `hgst/bulk`) moved to `tank/nosnap` (copy, `cmp`, then delete).
+  **`hgst/bulk` and its `[bulk]` share stay for now** (decided 2026-10-29),
+  empty; the ADR-0011 plan to move bulk media to `tank/media` and destroy
+  `hgst/bulk` is on hold.
 
 ## Alternatives considered
 
