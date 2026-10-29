@@ -1,6 +1,6 @@
 # ADR-0009: Storage Expansion — LSI SAS 9211-8i HBA; Disk Inventory
 
-**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); role decided in ADR-0017 (ZFS mirror `tank`, not created yet). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate and Samsung SSD still without a role.
+**Status:** Accepted — implemented 2026-10-20 with an **LSI SAS 9300-8i** instead of the 9211-8i (see Update). 2× used IronWolf 8 TB installed 2026-10-28 instead of the 6 TB (see Update); role decided in ADR-0017 (ZFS mirror `tank`, not created yet). Disk roles partly open: HGST decided in ADR-0011 (2026-09-26); Seagate = pool `scratch` since 2026-10-29; Samsung SSD still without a role.
 **Date:** 2026-09-21
 
 ## Context
@@ -123,7 +123,7 @@ Open items:
 - Check the HBA heatsink temperature under sustained use. The SAS3008 is
   built for server airflow; overheating shows up as `mpt3sas` resets and
   dropped disks in `dmesg`.
-- Roles for the Seagate (SMR) and the Samsung 512 GB SSD.
+- ~~Role for the Seagate (SMR)~~ (`scratch`, 2026-10-29); role for the Samsung 512 GB SSD.
 - ~~6 TB purchase~~ (2× 8 TB instead, see Update 2026-10-28); GPU use.
 
 ## Update 2026-10-28: 2× IronWolf 8 TB (used) instead of the 6 TB
@@ -186,3 +186,25 @@ Open items:
 - Scheduled smartd self-tests (short daily, long monthly, staggered) and
   `-W` temperature limits; better as per-disk lines or a `DEVICESCAN` change
   for all disks.
+
+## Update 2026-10-29: Seagate ST1000LM035 → pool `scratch`
+
+The Seagate ({seagate-serial}, SMR, empty, healthy; ADR-0009 update
+2026-10-20) is now a single-disk pool **`scratch`** with one dataset,
+`scratch/staging`: a landing place for downloads before they're sorted
+onto `tank` (ADR-0017). First use: `demo-1.hc` from the second old Azure
+account.
+
+```bash
+zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa \
+  scratch /dev/disk/by-id/ata-ST1000LM035-1RK172_{seagate-serial}
+zfs create scratch/staging
+```
+
+- Never the only copy of anything that matters: an old SMR laptop drive
+  with no redundancy. Data on it is either still in Azure or replaceable.
+- Not in Sanoid, not replicated. The monthly scrub (cron) and smartd
+  (`DEVICESCAN`) cover it.
+- The Samsung 512 GB SSD still has no role (old Windows 8 install on it,
+  Wear_Leveling 57).
+

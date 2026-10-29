@@ -85,8 +85,8 @@ When a decision changes, update its **Status** and add a dated
   the host, 27 security. Maintenance window: `apt full-upgrade`, reboot if
   needed (ask first), check cluster/HA/timers afterwards.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
-  passed an extended self-test. Left: check HBA heatsink temperature; roles
-  for the Seagate 1TB and Samsung 512GB SSD; GPU use. Disk
+  passed an extended self-test. Left: check HBA heatsink temperature; role
+  for the Samsung 512GB SSD (Seagate = `scratch` since 2026-10-29); GPU use. Disk
   letters shifted with the HBA: use `/dev/disk/by-id/…`, not `sdX`.
 - **ADR-0009 (IronWolf 8 TB, 2026-10-28)**: two used ST8000VN004 installed,
   verified empty, SMART clean; extended self-tests started 2026-10-28
