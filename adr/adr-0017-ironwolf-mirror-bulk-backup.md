@@ -229,8 +229,12 @@ Storage for both, today: ~259 kr/month.
   the two already on `hgst/bulk` (different names, same fixed size).
   **Decided 2026-10-29: pull both to `scratch/staging` (single copy is
   accepted, ADR-0009) and delete them from Azure.** demo-1 in October's
-  free allowance, demo-2 on the first day of the next billing period
-  (~260 kr together, vs ~342 kr both at once).
+  free allowance. **demo-2 only from leftover free allowance**, in pieces:
+  `rclone cat … --offset <current size> --count <free bytes> >> demo-2.hc`
+  (resumable; the next offset is the file's size), lowest priority after
+  the planned batches. Done when the size is 214,748,364,800 and it mounts
+  in VeraCrypt; then delete it from Azure (~21 kr/month on Cool until
+  then).
 - The rest (~107 GB) is mostly video recordings (75 GB, 62 GB of it Cold)
   plus small folders.
 
