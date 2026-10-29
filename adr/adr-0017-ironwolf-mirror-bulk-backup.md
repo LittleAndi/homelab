@@ -33,8 +33,8 @@ zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa \
 
 ~7.2 TiB usable. The name is the conventional ZFS pool name from the original Sun docs
 (confirmed 2026-10-29); the other pools are named after their disks.
-Created only after both extended self-tests show "Completed without error"
-(and after the burn-in, if one is run).
+Created only after both extended self-tests show "Completed without error".
+No badblocks burn-in (decided 2026-10-29, see ADR-0009).
 
 ### 2. Datasets are the off-site boundary
 
@@ -249,7 +249,7 @@ added in this ADR, no new Update section per batch.
 
 ## Open items
 
-- Create `tank` and the datasets after the self-tests (and optional burn-in).
+- Create `tank` and the datasets after the self-tests (no burn-in).
 - Move `hgst/bulk` → `tank/media`, repoint Samba, then destroy `hgst/bulk`
   (ask first).
 - ~~Confirm the old migration account's region and tier.~~ Done

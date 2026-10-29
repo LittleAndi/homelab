@@ -87,8 +87,8 @@ When a decision changes, update its **Status** and add a dated
   letters shifted with the HBA: use `/dev/disk/by-id/…`, not `sdX`.
 - **ADR-0009 (IronWolf 8 TB, 2026-10-28)**: two used ST8000VN004 installed,
   verified empty, SMART clean; extended self-tests started 2026-10-28
-  20:54 CET. Left: check results + save `smartctl -x` baseline; optional
-  badblocks burn-in; scheduled smartd self-tests / temperature limits.
+  20:54 CET. Left: check results + save `smartctl -x` baseline (burn-in
+  skipped 2026-10-29); scheduled smartd self-tests / temperature limits.
   (Role: ADR-0017.)
 
 ## Using this repo

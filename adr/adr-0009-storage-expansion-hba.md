@@ -176,9 +176,11 @@ Open items:
 
 - Check the extended self-test results (`smartctl -l selftest`) and save a
   `smartctl -x` baseline for both.
-- Optional burn-in before use (destructive, drives are empty):
-  `badblocks -b 4096 -wsv -t 0xaa <by-id>`, about a day per pass; re-check
-  SMART afterwards.
+- ~~Optional burn-in before use~~ (`badblocks -wsv`, days per drive).
+  **Skipped** (decided 2026-10-29): clean SMART histories and two full read
+  tests; the ZFS mirror (checksums, monthly scrub, redundancy) catches a weak
+  drive, and the migration data stays in Azure until it's home. Not losing
+  October's free egress (ADR-0017 §7) tipped it.
 - ~~Choose the mirror's filesystem and role (new ADR).~~ Decided
   2026-10-28 in ADR-0017: ZFS mirror `tank` for bulk media and backups.
 - Scheduled smartd self-tests (short daily, long monthly, staggered) and
