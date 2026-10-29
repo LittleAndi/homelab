@@ -129,7 +129,8 @@ migration account's region and tier are **not confirmed yet**:
 | Minimum retention (early-delete charge) | — | 30 d | 90 d | 180 d |
 | Read ops, per 10k | 0.04 | 0.10 | 1.00 | 59.80 |
 
-Internet egress: **first 100 GB per month free** (for the whole billing
+Internet egress: **first 100 GB per billing period free** (calendar month,
+confirmed 2026-10-29; for the whole billing
 account, all regions and services), then **0.867 kr/GB**.
 
 **Estimate for the ~1,140 GB not home yet**, with batches of 95 GB/month
