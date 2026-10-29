@@ -31,7 +31,8 @@ zpool create -o ashift=12 -O compression=lz4 -O atime=off -O xattr=sa \
   /dev/disk/by-id/ata-ST8000VN004-2M2101_{ironwolf-serial-2}
 ```
 
-~7.2 TiB usable. The pool is named for what it holds, not the hardware.
+~7.2 TiB usable. The name is the conventional ZFS pool name from the original Sun docs
+(confirmed 2026-10-29); the other pools are named after their disks.
 Created only after both extended self-tests show "Completed without error"
 (and after the burn-in, if one is run).
 
