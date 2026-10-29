@@ -266,6 +266,7 @@ added in this ADR, no new Update section per batch.
 | 2026-10 | listing of `{docs-azure-account}` (+ MD5 metadata for two folders) | <0.1 | — | — |
 | 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
 | 2026-10 | `demo-1.hc` (second account, Cool) → `scratch/staging`, 214,748,364,800 bytes, 0 errors (2026-10-29 02:10–04:32). **October total ~234 GB** (~19 GB before it, Azure Monitor `Egress`): ~134 GB billed, est. ~137 kr incl. Cool retrieval | ~215 | — | second account: demo-2 + ~107 GB + 170 GB duplicates |
+| 2026-10 | `demo-1.hc` checked in VeraCrypt from `tank/nosnap`, **deleted from Azure** 2026-10-29 | 0 | — | second account: demo-2 (215 GB) + ~107 GB + 170 GB duplicates |
 
 ## Update 2026-10-29: `tank` created
 
