@@ -214,9 +214,25 @@ mostly pulled and paid for now (0.18 kr per GB-month to wait):
 | Everything now | ~1,531 kr |
 | **~910 GB of the Hot container paid now; second account + rest in free 95 GB/month batches over ~8 months** | **~1,186 kr** (incl. ~83 kr retrieval) |
 
-Storage for both, today: ~259 kr/month. Before pulling the second account,
-list it (41k files, cheap) and look for duplicates of the first (camera
-uploads/photos), which would be deleted instead of downloaded.
+Storage for both, today: ~259 kr/month.
+
+**Listing of the second account (2026-10-29, list only):** 41,690 files,
+706.5 GB.
+
+- **170 GB (36,558 files) are pictures that also exist in the first
+  container** (same name + size). They're never downloaded from here:
+  once the first container's copies are home, their MD5 is compared with
+  the MD5 Azure stores for these blobs (35,437 of 35,442 and 2,115 of 2,138
+  have one; reading it is a listing, not a download), and matching blobs
+  are deleted here. Files without an MD5 or with a mismatch are pulled.
+- **429.5 GB are two 200 GiB VeraCrypt containers**, Cool, that are *not*
+  the two already on `hgst/bulk` (different names, same fixed size). Keep or
+  delete: open.
+- The rest (~107 GB) is mostly video recordings (75 GB, 62 GB of it Cold)
+  plus small folders.
+
+Revised joint estimate: **~1,044 kr** keeping the two VeraCrypt containers,
+**~740 kr** without them.
 
 Other rules:
 
@@ -237,6 +253,7 @@ added in this ADR, no new Update section per batch.
 | 2026-09 | `tmp` (ADR-0011) | ~430 | ~430 GB (400 GiB) | ~1.1 TB |
 | 2026-10 | partial `az storage blob list` (stopped), metrics | <1 (list responses) | ~430 GB | 1,139 GB, 3.85M files |
 | 2026-10 | full decrypted listing (`rclone lsf -R --fast-list`, kept on the host); **deleted** game libraries (7,127 files, 42 GB) | ~4 (list responses) | ~430 GB | 1,092 GB, 3.85M files |
+| 2026-10 | listing of `{docs-azure-account}` (+ MD5 metadata for two folders) | <0.1 | — | — |
 | 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
 
 ## Alternatives considered

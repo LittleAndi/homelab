@@ -34,7 +34,9 @@ When a decision changes, update its **Status** and add a dated
   kr/month): listed 2026-10-28; games + build output deleted (now 1,052 GB,
   2.33M files); prune more if wanted, then a paid batch + ~4 free months,
   est. ~675 kr alone; with the second account `{docs-azure-account}`
-  (706 GB, mostly Cool, unencrypted) ~1,186 kr jointly
+  (706 GB, mostly Cool, unencrypted; 170 GB duplicate pictures to delete
+  after an MD5 check; 2 × 200 GiB VeraCrypt containers, keep or delete
+  open) ~740–1,044 kr jointly
   (ADR-0017 §7, log each batch);
   sort irreplaceable data into `tank/archive`, pick its Azure tier, extend
   the off-site sync; delete the old migration container (ask first);
