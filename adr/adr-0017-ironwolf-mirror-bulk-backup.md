@@ -197,6 +197,27 @@ Folder names stay out of the repo.
    pruning (smaller remainder → fewer free months worth waiting for).
 4. Delete the container or account when it's empty (ask first).
 
+**Second old account, `{docs-azure-account}`** (found 2026-10-29; Sweden
+Central, LRS, not encrypted, 14 containers): **Cool 642 GB / 41,188
+blobs, Cold 62 GB / 501, Hot 1.8 GB / 1**. Remote `{docs-azure-remote}:`
+with an account SAS (`07-setup-docs-remote.sh`). Reading costs retrieval
+on top of egress (Cool 0.0997, Cold 0.299 kr/GB: ~83 kr in total, whenever
+it's read). Both accounts share the same free 100 GB/month.
+
+**Joint plan (estimate 2026-10-29, before pruning the second account):**
+the free allowance goes to the data that's cheapest to keep waiting.
+Cold/Cool wait (0.036/0.10 kr per GB-month) while the Hot container is
+mostly pulled and paid for now (0.18 kr per GB-month to wait):
+
+| | Estimate |
+|---|---|
+| Everything now | ~1,531 kr |
+| **~910 GB of the Hot container paid now; second account + rest in free 95 GB/month batches over ~8 months** | **~1,186 kr** (incl. ~83 kr retrieval) |
+
+Storage for both, today: ~259 kr/month. Before pulling the second account,
+list it (41k files, cheap) and look for duplicates of the first (camera
+uploads/photos), which would be deleted instead of downloaded.
+
 Other rules:
 
 - Other downloads count against the same 100 GB: off-site restore tests
