@@ -14,7 +14,7 @@ When a decision changes, update its **Status** and add a dated
 | [0005](adr/adr-0005-storage-tiering.md) | SSD for system/DB, HDD for bulk data | Accepted — implemented via 0008 |
 | [0006](adr/adr-0006-container-platform.md) | Podman | Superseded by 0008 |
 | [0007](adr/adr-0007-application-stack.md) | Compose stack, Tailscale+Caddy, observability | Superseded by 0010 |
-| [0008](adr/adr-0008-proxmox-zfs-microk8s.md) | Proxmox VE + ZFS + 5-VM MicroK8s | Accepted — deployed 2026-09-21; workers 4 → 3 GB 2026-10-27 (cluster 15 GB) |
+| [0008](adr/adr-0008-proxmox-zfs-microk8s.md) | Proxmox VE + ZFS + 5-VM MicroK8s | Accepted — deployed 2026-09-21; workers 4 → 3 GB 2026-10-27 (cluster 15 GB); host updated 2026-10-31 |
 | [0009](adr/adr-0009-storage-expansion-hba.md) | IT-mode HBA for SATA expansion; disk inventory | Accepted — **LSI 9300-8i** (instead of 9211-8i) installed 2026-10-20; 2× used IronWolf 8 TB (instead of 6 TB) installed 2026-10-28, role in 0017 |
 | [0010](adr/adr-0010-nextcloud-microk8s-deployment.md) | Nextcloud on MicroK8s: like-for-like move, Helm chart + own MariaDB, Tailscale operator | **Accepted — migrated 2026-09-26; on 35.0.2 (PHP 8.5.12) since 2026-10-23** |
 | [0011](adr/adr-0011-snapshots-backup-hgst.md) | Sanoid snapshots, HGST pool for local backup + bulk data (SMB), Azure from snapshot | Accepted — implemented 2026-09-26; Azure sync since 2026-10-26 |
@@ -80,9 +80,10 @@ When a decision changes, update its **Status** and add a dated
   (host available 6.2 → 8.0 GiB); `terraform plan` clean, backup run.
   Left: grow a node again if Grafana shows it tight. Host zram: optional,
   not decided.
-- **ADR-0008 (host updates, found 2026-10-26)**: 39 packages pending on
-  the host, 27 security. Maintenance window: `apt full-upgrade`, reboot if
-  needed (ask first), check cluster/HA/timers afterwards.
+- **ADR-0008 (updates, 2026-10-31)**: host packages and kernel 7.0.14-26 done;
+  `scripts/graceful-shutdown.sh` replaces the host's copy (real reboot not run
+  yet). Left: node kernels to Ubuntu 7.0.0-43 once released (rolling); find out
+  why kubelets missed pod deletions during the reboot.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; role
   for the Samsung 512GB SSD (Seagate = `scratch` since 2026-10-29); GPU use. Disk
@@ -148,7 +149,8 @@ homelab/
 │   ├── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
 │   └── proxmox-sandbox/              ← ADR-0016: sandbox VM + guest setup scripts, README
 ├── CLAUDE.md                         ← rules for Claude Code in this repo
-├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh
+├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh;
+│                                        ADR-0008: graceful-shutdown.sh
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)
 └── .pre-commit-config.yaml           ← gitleaks + site-value check
 ```

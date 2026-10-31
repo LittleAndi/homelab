@@ -1,6 +1,6 @@
 # ADR-0008: Proxmox VE + ZFS + 5-VM MicroK8s Cluster
 
-**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27. Supersedes ADR-0004 and ADR-0006.
+**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27; host updated to kernel 7.0.14-26 2026-10-31. Supersedes ADR-0004 and ADR-0006.
 
 > The Decision section below is the original proposal. The dated Update
 > sections record what changed on the way to the deployed state; where they
@@ -251,6 +251,34 @@ Learned during the drain:
   deadlock under memory pressure); zram is the option if the host ever
   needs a buffer. Not decided.
 
+## Update 2026-10-31: host updated; graceful reboot script runs from the workstation
+
+The host got its pending packages and kernel 7.0.14-26 (fix for
+CVE-2026-98432, per Proxmox staff in forum thread 187339; 7.0.14-25 and later).
+
+- **`/usr/local/sbin/graceful-shutdown.sh` on the host was removed.** It could
+  only power off, left Nextcloud and its database at 0 replicas, and root on
+  the host has no SSH key for the nodes. The failed pod count read as "no pods
+  left", so it would have powered off at once with Nextcloud still running.
+- **`scripts/graceful-shutdown.sh` replaces it,** run from the workstation:
+  `check`, `reboot`, `poweroff`, `start`. It stops on any cluster failure.
+  The reboot and power-off paths have only run against a stubbed `ssh` so far.
+
+Learned during the reboot:
+
+- **Pod deletions can be missed.** After scaling to 0, the Nextcloud pod (cp3)
+  and database pod (wk1) stayed `Terminating` past their 30 s grace period. The
+  kubelets still listed them as running with no deletion set. Cause not
+  established; the host reboot cleared it.
+- **Don't restart kubelite on a control-plane node to clear this.** On cp3 it
+  restarted 3 times, couldn't find its own node, `microk8s status` hung there
+  and `k8s-dqlite` logged range errors, while cp1 and cp2 stayed healthy.
+- **Rebooting anyway worked.** The VM shutdown stopped the database, which
+  started without crash recovery. The scale to 0 was kept in the datastore.
+- **A reboot during a Tailscale control-plane incident can leave a machine off
+  the tailnet** until the incident clears (seen on the HA add-on, which rejoined
+  by itself). LAN access keeps working; `check` warns about open incidents.
+
 ## Open items
 
 - ~~Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no
@@ -277,9 +305,13 @@ Learned during the drain:
 - ~~Point the Azure/rclone backup at snapshots of `hdd-mirror/k8s`
   (`.zfs/snapshot/…`); not set up yet.~~ Done 2026-10-26: nightly sync of
   the newest daily snapshot to its own storage account (ADR-0011 §3).
-- Host updates (found 2026-10-26): 39 packages pending, 27 of them from
+- ~~Host updates (found 2026-10-26): 39 packages pending, 27 of them from
   `stable-security`. Plan a maintenance window: `apt full-upgrade` on the
   host, reboot if the kernel or `pve-*` changed (needs an OK; the VMs and
-  the cluster go down with it), then check the cluster, HA and the timers.
+  the cluster go down with it), then check the cluster, HA and the timers.~~
+  Done 2026-10-31 (see Update).
+- Node kernels: rolling update to Ubuntu 7.0.0-43 once it's released, one node
+  at a time. Watch for pods stuck in `Terminating` while draining (see Update).
+- Find out why the kubelets missed the pod deletions on 2026-10-31.
 - Role of the 1TB HDD(s) and the planned 6TB drive(s) under this design (see ADR-0009).
   Live host shows one 1 TB HGST (`sdc`, blank) and a 512 GB Samsung SSD with NTFS (`sdd`).
