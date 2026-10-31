@@ -1,6 +1,6 @@
 # ADR-0013: Monitoring — kube-prometheus-stack in the Cluster, Exporters on the Host
 
-**Status:** Accepted 2026-10-24 — deployed 2026-10-26 (chart 92.13.1); custom dashboard not built yet
+**Status:** Accepted 2026-10-24 — deployed 2026-10-26 (chart 92.13.1); Entra ID sign-in added 2026-10-31; custom dashboard not built yet
 **Date:** 2026-10-24
 
 ## Context
@@ -190,8 +190,39 @@ These are installed by `infra/proxmox-microk8s/monitoring/host/20-setup-host-exp
   proxy:
   `kubectl get --raw '/api/v1/namespaces/monitoring/services/kube-prometheus-stack-prometheus:http-web/proxy/api/v1/targets'`.
 
+## Update 2026-10-31: Entra ID sign-in
+
+Grafana sign-in now goes through Entra ID, using Grafana's built-in
+`auth.azuread` provider (helm revision 3, same chart version). Access stays
+tailnet-only: the redirects run in the browser, so Entra never connects to
+Grafana.
+
+- **App registration:** *Grafana homelab* in the personal tenant that holds
+  the Azure subscriptions; single tenant, with `allowed_organizations` also
+  set to that tenant. IDs are in `site.env`.
+- **Who gets in:** assignment is required on the enterprise application. One
+  user so far, the owner, as `Admin`. Grafana also refuses a login with no
+  role (`role_attribute_strict`).
+- **Roles:** app roles `Admin`, `Editor` and `Viewer`, synced at each login, so
+  Entra is the source of truth rather than the Grafana UI. No `GrafanaAdmin`
+  role: the local admin covers server-level administration.
+- **Break-glass:** the local admin and login form stay, so Grafana is still
+  reachable if Entra or the secret fails.
+- **Client secret:** only in the Secret `grafana-entra`, piped straight from
+  `az`. It expires **2028-10-31**. The Grafana pod won't start without this
+  Secret, so a rebuild has to create it first (runbook).
+- **Alternatives:** Tailscale identity through `auth.proxy` would avoid a
+  second login and a secret, but it was not what was asked for here and adds
+  a proxy in front of Grafana. Generic OAuth has no advantage over the
+  dedicated provider.
+
+**Dependency:** new logins now depend on Microsoft being reachable; the local
+admin doesn't.
+
 ## Open items
 
+- Rotate the Entra client secret by 2028-10-31 (runbook §4). Nothing alerts
+  on its expiry.
 - ~~Run script 20 on the host. Verify the three ports from cp1, and that
   another LAN machine is refused.~~ Done 2026-10-26.
 - ~~Pick the chart version, record it in the runbook, and run `helm install`.~~
