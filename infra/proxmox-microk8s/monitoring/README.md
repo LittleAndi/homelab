@@ -55,7 +55,14 @@ kubectl -n monitoring create secret generic grafana-admin \
   --from-literal=admin-user=admin --from-literal=admin-password="$GF_PW"
 unset GF_PW
 
-scripts/render.sh      # writes .rendered/… with the real tailnet from site.env
+# Entra sign-in: the Grafana pod won't start without this Secret (section 4).
+# Needs site.env loaded: set -a; . ./site.env; set +a
+az ad app credential reset --id "$ENTRA_GRAFANA_CLIENT_ID" --display-name grafana \
+  --years 2 --query password -o tsv | tr -d '\n' \
+  | kubectl -n monitoring create secret generic grafana-entra \
+      --from-file=client-secret=/dev/stdin
+
+scripts/render.sh      # writes .rendered/… with the real values from site.env
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   -n monitoring -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml \
   --version 92.13.1
@@ -83,6 +90,32 @@ time() - zfs_dataset_newest_snapshot_timestamp_seconds     # snapshot / syncoid 
 node_systemd_unit_state{state="failed"} == 1
 smartctl_device_temperature
 pve_up
+```
+
+## 4. Entra ID sign-in
+
+"Sign in with Microsoft" uses the app registration *Grafana homelab*
+(single tenant, redirect URI `https://grafana.{tailnet}.ts.net/login/azuread`,
+assignment required). `ENTRA_TENANT_ID` and `ENTRA_GRAFANA_CLIENT_ID` are in
+`site.env`; the client secret is only in the Secret `grafana-entra`.
+
+**Access:** Entra admin center → Enterprise applications → *Grafana homelab* →
+Users and groups. Assign a user `Admin`, `Editor` or `Viewer`. Roles sync at
+each login, so don't change them in Grafana. Group assignment needs Entra ID P1.
+
+**Break-glass:** the local admin from `grafana-admin` still works on the login
+form.
+
+**Rotate the secret** (expires 2028-10-31; logins fail after that). Load
+`site.env` first, then:
+
+```bash
+az ad app credential reset --id "$ENTRA_GRAFANA_CLIENT_ID" --display-name grafana \
+  --years 2 --query password -o tsv | tr -d '\n' \
+  | kubectl -n monitoring create secret generic grafana-entra \
+      --from-file=client-secret=/dev/stdin --dry-run=client -o yaml \
+  | kubectl apply -f -
+kubectl -n monitoring rollout restart deploy/kube-prometheus-stack-grafana
 ```
 
 ## Upgrade

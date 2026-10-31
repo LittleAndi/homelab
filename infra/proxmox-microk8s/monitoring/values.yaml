@@ -148,6 +148,27 @@ grafana:
       reporting_enabled: false
       check_for_updates: false
       check_for_plugin_updates: false
+    # Entra ID sign-in (ADR-0013). The role comes from the app roles assigned
+    # in Entra at every login; a user without a role is refused. The local
+    # admin login stays as break-glass.
+    auth.azuread:
+      enabled: true
+      name: Microsoft
+      client_id: ${ENTRA_GRAFANA_CLIENT_ID}
+      scopes: openid email profile
+      auth_url: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/authorize
+      token_url: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/token
+      allowed_organizations: ${ENTRA_TENANT_ID}
+      allow_sign_up: true
+      use_pkce: true
+      role_attribute_strict: true
+
+  # The client secret, from a Secret created on the command line (README.md).
+  envValueFrom:
+    GF_AUTH_AZUREAD_CLIENT_SECRET:
+      secretKeyRef:
+        name: grafana-entra
+        key: client-secret
 
   # Grafana.com dashboards, downloaded by an init container at start-up.
   # Pinned revisions (2026-10-26); to update, check
