@@ -338,6 +338,13 @@ The policy file's allow-all now has source `autogroup:member`, so the
 `tag:k8s` proxies and the operator answer but don't initiate (ADR-0016).
 Everything above still works.
 
+## Update 2026-10-31: no Entra ID sign-in
+
+Grafana (ADR-0013) and Proxmox (ADR-0008) now sign in through Entra ID.
+Nextcloud stays on its own accounts. The `user_oidc` app could create new users
+next to the existing ones, and moving files between accounts isn't worth the
+hassle.
+
 ## Open items
 
 - Decommission the Podman stack on `{workstation}` after a few stable days. Keep

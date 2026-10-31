@@ -1,6 +1,6 @@
 # ADR-0008: Proxmox VE + ZFS + 5-VM MicroK8s Cluster
 
-**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27; host updated to kernel 7.0.14-26 2026-10-31. Supersedes ADR-0004 and ADR-0006.
+**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27; host updated to kernel 7.0.14-26 2026-10-31; Entra ID sign-in realm added 2026-10-31. Supersedes ADR-0004 and ADR-0006.
 
 > The Decision section below is the original proposal. The dated Update
 > sections record what changed on the way to the deployed state; where they
@@ -279,8 +279,52 @@ Learned during the reboot:
   the tailnet** until the incident clears (seen on the HA add-on, which rejoined
   by itself). LAN access keeps working; `check` warns about open incidents.
 
+## Update 2026-10-31: Entra ID sign-in realm
+
+The Proxmox UI can now be signed in to through Entra ID, with a built-in OpenID
+Connect realm `entra` (no extra software, no restart). It is an addition:
+`root@pam` and the `pve` realm's accounts are unchanged, and `pam` stays the
+fallback for when Microsoft or the internet connection is down.
+
+- **App registration:** *Proxmox homelab*, separate from Grafana's, in the same
+  single tenant (ADR-0013). The client ID is in `site.env`.
+- **Address:** the only redirect URI is `https://pve.{tailnet}.ts.net`, the
+  Tailscale Serve address with a valid certificate. Entra sign-in therefore
+  works only from there; on `https://192.168.1.10:8006`, use `pam`.
+- **Who gets in:** three gates: assignment is required on the enterprise
+  application, `autocreate` is off, and a Proxmox user needs an explicit ACL.
+  Roles live in Proxmox, because the realm doesn't read Entra roles.
+- **Username:** `{object-id}@entra`, from the `oid` claim (`--username-claim`
+  can't be changed later). `oid` is immutable and known in advance, so a user
+  can be created before the first login, whereas an email can change.
+- **Claims:** read from the ID token (`--query-userinfo 0`); the v2 token has
+  `oid` with the `profile` scope.
+- **First user:** the owner, as `Administrator` on `/`. Some operations remain
+  limited to `root@pam`.
+- **Client secret:** on the host in `/etc/pve/domains.cfg`, piped from `az` over
+  SSH. It expires **2028-10-31**.
+
+To add a user, assign them to *Proxmox homelab* in Entra, then on the host:
+
+```bash
+pveum user add '{object-id}@entra' --comment '{who}'
+pveum acl modify / --users '{object-id}@entra' --roles {role}
+```
+
+To rotate the secret, load `site.env`, then from WSL:
+
+```bash
+az ad app credential reset --id "$ENTRA_PVE_CLIENT_ID" --display-name proxmox \
+  --years 2 --query password -o tsv \
+  | ssh root@pve 'read -r K; pveum realm modify entra --client-key "$K"'
+```
+
 ## Open items
 
+- Confirm a full Entra login at `https://pve.{tailnet}.ts.net`. So far Entra
+  has only been seen to accept the authorize request (2026-10-31).
+- Rotate the Proxmox Entra client secret by 2028-10-31. Nothing alerts on its
+  expiry.
 - ~~Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no
   drift after the 2026-10-27 worker resize, then `scripts/backup-local.sh`.~~
   Done 2026-10-27: no changes; backup run.
