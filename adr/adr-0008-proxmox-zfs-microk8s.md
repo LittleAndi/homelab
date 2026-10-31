@@ -321,8 +321,8 @@ az ad app credential reset --id "$ENTRA_PVE_CLIENT_ID" --display-name proxmox \
 
 ## Open items
 
-- Confirm a full Entra login at `https://pve.{tailnet}.ts.net`. So far Entra
-  has only been seen to accept the authorize request (2026-10-31).
+- ~~Confirm a full Entra login at `https://pve.{tailnet}.ts.net`.~~ Done
+  2026-10-31: confirmed by the owner.
 - Rotate the Proxmox Entra client secret by 2028-10-31. Nothing alerts on its
   expiry.
 - ~~Run `terraform plan` (with `TF_VAR_proxmox_api_token`) to confirm no

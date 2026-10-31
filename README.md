@@ -86,8 +86,7 @@ When a decision changes, update its **Status** and add a dated
   yet). Left: node kernels to Ubuntu 7.0.0-43 once released (rolling); find out
   why kubelets missed pod deletions during the reboot.
 - **ADR-0008 (Entra ID, 2026-10-31)**: realm `entra` added, `root@pam` kept as
-  the fallback. Left: confirm a full login at `https://pve.{tailnet}.ts.net`;
-  rotate the client secret by 2028-10-31.
+  the fallback; login confirmed. Left: rotate the client secret by 2028-10-31.
 - **ADR-0009**: HBA (9300-8i, IT mode) installed 2026-10-20; the Seagate on it
   passed an extended self-test. Left: check HBA heatsink temperature; role
   for the Samsung 512GB SSD (Seagate = `scratch` since 2026-10-29); GPU use. Disk
