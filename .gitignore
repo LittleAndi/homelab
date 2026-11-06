@@ -3,6 +3,7 @@ site.env
 .rendered/
 *.local.yaml
 *.local.env
+*.local.md
 
 # Terraform: real token, state with passwords/keys, provider cache.
 # Commit only *.tfvars.example and .terraform.lock.hcl.

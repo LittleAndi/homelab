@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copy the local-only files (ADR-0014) to LOCAL_BACKUP_DIR from site.env,
 # keeping their repo-relative paths. Run after changing site.env, running
-# terraform, or taking a new Z-Stick backup.
+# terraform, taking a new Z-Stick backup, or editing a *.local.md note.
 set -euo pipefail
 . "$(dirname "$0")/lib-site.sh"
 load_site_env
@@ -14,7 +14,7 @@ LOCAL_ONLY=(
   infra/proxmox-microk8s/terraform/terraform.tfstate.backup
 )
 shopt -s nullglob
-LOCAL_ONLY+=(infra/proxmox-ha/backup/* infra/proxmox-microk8s/*/*.local.yaml)
+LOCAL_ONLY+=(infra/proxmox-ha/backup/* infra/proxmox-microk8s/*/*.local.yaml ./*.local.md)
 
 mkdir -p "$LOCAL_BACKUP_DIR"
 for f in "${LOCAL_ONLY[@]}"; do
