@@ -55,6 +55,7 @@ A scan of the folder on 2026-10-24 found:
 | `.terraform/` | Provider cache |
 | `infra/proxmox-ha/backup/` | Z-Wave network keys |
 | `*.local.yaml`, `*.local.env`, `.rendered/` | Local overlays and rendered output |
+| `*.local.md` | Local working notes (Update 2026-11-06) |
 
 - **Backup:** `scripts/backup-local.sh` copies these files to
   `LOCAL_BACKUP_DIR` (in Nextcloud), keeping their repo-relative paths.
@@ -186,6 +187,17 @@ This replaces the "Mirror" column of §5 for ADRs and the README.
 - **Hand-offs:** a decision reached in a Project chat is handed to Claude
   Code to write up and commit. The Project never holds a version the repo
   doesn't have.
+
+## Update 2026-11-06: local notes (`*.local.md`)
+
+Working notes that must stay out of the public repo, such as an update
+plan, live at the repo root as `*.local.md`.
+
+- **Gitignored:** `*.local.md` joins `*.local.yaml` and `*.local.env` in
+  `.gitignore` (§2), so every clone ignores them, not only the one that set
+  up `.git/info/exclude`.
+- **Backed up:** `scripts/backup-local.sh` copies `./*.local.md` with the
+  other local-only files. The pattern keeps the note names out of git.
 
 ## Open items
 

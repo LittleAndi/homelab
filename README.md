@@ -111,7 +111,7 @@ scripts/backup-local.sh               # copy local-only files to LOCAL_BACKUP_DI
 ```
 
 Local-only, gitignored: `site.env`, `terraform.tfvars`, `*.tfstate*`,
-`.terraform/`, `infra/proxmox-ha/backup/`, `*.local.yaml`, `.rendered/`.
+`.terraform/`, `infra/proxmox-ha/backup/`, `*.local.yaml`, `*.local.md`, `.rendered/`.
 Secrets are never in files at all: they go into Kubernetes Secrets from the
 command line or stay on the host.
 
