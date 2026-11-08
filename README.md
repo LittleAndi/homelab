@@ -34,8 +34,9 @@ When a decision changes, update its **Status** and add a dated
   2.33M files); prune more if wanted, then a paid batch + ~4 free months,
   est. ~675 kr alone; with the second account `{docs-azure-account}`
   (706 GB, mostly Cool, unencrypted; 170 GB duplicate pictures to delete
-  after an MD5 check; one 215 GB file left to pull from spare free
-  allowance) ~740–1,044 kr jointly
+  after an MD5 check; one large file being pulled from spare free
+  allowance: 85 of 215 GB home 2026-11-08, ~130 GB to go; November ~91 GB
+  used so far) ~740–1,044 kr jointly
   (ADR-0017 §7, log each batch);
   sort irreplaceable data into `tank/archive`, pick its Azure tier, extend
   the off-site sync; delete the old migration container (ask first);
