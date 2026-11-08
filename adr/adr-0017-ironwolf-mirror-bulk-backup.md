@@ -263,6 +263,7 @@ added in this ADR, no new Update section per batch.
 | 2026-10 | listing of `{docs-azure-account}` (+ MD5 metadata for two folders) | <0.1 | — | — |
 | 2026-10 | dry run + **deleted** build output and package caches (1,517,218 files, 39.3 GB; `packages/` only next to a `.sln`/`.csproj`) | ~8 (two listings) | ~430 GB | 1,052 GB, 2.33M files |
 | 2026-10 | first large file from the second account (Cool, 215 GB; pulled, then deleted from Azure). **October total ~234 GB** (~19 GB before it, Azure Monitor `Egress`): ~134 GB billed, est. ~137 kr incl. Cool retrieval | ~215 | — | second account: 1 large file (215 GB) + ~107 GB + 170 GB duplicates |
+| 2026-11 | second large file, first piece (`rclone cat --offset 0 --count 85000000000`, 85.0 GB of 214.7 GB; Cool). ~6.2 GB before it (Azure Monitor `Egress`, 1–8 Nov). **November total so far ~91 GB**: nothing billed, est. ~8.5 kr Cool retrieval | ~91 | — | second account: 129.7 GB of the large file + ~107 GB + 170 GB duplicates |
 
 ## Update 2026-10-29: `tank` created
 
