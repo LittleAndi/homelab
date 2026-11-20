@@ -1,6 +1,6 @@
 # ADR-0008: Proxmox VE + ZFS + 5-VM MicroK8s Cluster
 
-**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27; host updated to kernel 7.0.14-26 2026-10-31; Entra ID sign-in realm added 2026-10-31. Supersedes ADR-0004 and ADR-0006.
+**Status:** Accepted — deployed and verified 2026-09-21; workers cut to 3 GB 2026-10-27; host updated to kernel 7.0.14-26 2026-10-31; Entra ID sign-in realm added 2026-10-31; first real power-off and start with `scripts/graceful-shutdown.sh` 2026-11-12/13. Supersedes ADR-0004 and ADR-0006.
 
 > The Decision section below is the original proposal. The dated Update
 > sections record what changed on the way to the deployed state; where they
@@ -319,6 +319,28 @@ az ad app credential reset --id "$ENTRA_PVE_CLIENT_ID" --display-name proxmox \
   | ssh root@pve 'read -r K; pveum realm modify entra --client-key "$K"'
 ```
 
+## Update 2026-11-13: first real power-off and start
+
+The host was powered off on 2026-11-12 with `scripts/graceful-shutdown.sh
+poweroff` and Nextcloud was started again on 2026-11-13 with `start`, after the
+power button was pressed. Both paths had only run against a stubbed `ssh`.
+
+- **`poweroff` worked as written.** `check` passed, the timers stopped, and the
+  Nextcloud and database pods were gone within the 300 s wait, without
+  `--force`. No pod stayed `Terminating` this time (compare 2026-10-31).
+- **The host took about 4 minutes to go down.** After 3 minutes the other VMs
+  were stopped and the host was still waiting for `microk8s-cp1`; it stopped
+  answering ping about a minute later. Cause of the slow cp1 shutdown not
+  looked into.
+- **`start` worked as written.** All nodes Ready, database, then Nextcloud;
+  `status.php` answered with maintenance off.
+- **After power on:** the five cluster VMs and `haos` were running, the pools
+  healthy, both syncoid timers active, no failed units on the host, Home
+  Assistant answering on the LAN. `sandbox` stays stopped (`onboot=0`,
+  ADR-0016).
+- **The `reboot` path has still not run for real.** The 2026-10-31 reboot was
+  done by hand.
+
 ## Open items
 
 - ~~Confirm a full Entra login at `https://pve.{tailnet}.ts.net`.~~ Done
@@ -357,5 +379,7 @@ az ad app credential reset --id "$ENTRA_PVE_CLIENT_ID" --display-name proxmox \
 - Node kernels: rolling update to Ubuntu 7.0.0-43 once it's released, one node
   at a time. Watch for pods stuck in `Terminating` while draining (see Update).
 - Find out why the kubelets missed the pod deletions on 2026-10-31.
+- Run `scripts/graceful-shutdown.sh reboot` for real at the next host reboot;
+  `poweroff` and `start` ran 2026-11-12/13 (see Update).
 - Role of the 1TB HDD(s) and the planned 6TB drive(s) under this design (see ADR-0009).
   Live host shows one 1 TB HGST (`sdc`, blank) and a 512 GB Samsung SSD with NTFS (`sdd`).
