@@ -178,3 +178,34 @@ so a failed deploy doesn't sit silent like the `batch` pull did.
   anything in another namespace (`kubectl auth can-i --as
   system:serviceaccount:<app>:flux …`).
 - A `kubectl` edit to a managed Deployment is reverted.
+
+## Update 2026-11-21: pull secrets — public images where possible, one script for the rest
+
+Pull secrets are per namespace, so with more apps a token rotation means
+updating every copy; that is how the `batch` outage happened (below).
+
+- **Public app repo → public GHCR images**, no pull secret in its
+  namespace.
+- **Private apps:** their namespace carries the label
+  `homelab/ghcr-pull=true` (set in `clusters/homelab/infra/` once Flux
+  runs; by hand with `kubectl label` until then). `scripts/ghcr-pull.sh`
+  asks for the token once (`read -rs`, or `GHCR_TOKEN` from the password
+  manager CLI), checks it against the GitHub API, then writes `ghcr-pull`
+  into every labelled namespace and `ghcr-flux` into `flux-system`. One
+  classic PAT (`read:packages` only) serves both. Rotation is one command;
+  the token is never a command-line argument.
+- **Rejected:** credentials in containerd on all nodes (token on 5 disks,
+  every namespace can pull private images, unclear support in
+  containerd 2.x); Reflector/Kyverno/External Secrets (another controller
+  for one namespace so far); the `gh` CLI's own token (`repo` and more
+  scopes, stored in the cluster). GitHub has no API to create PATs, so
+  creating the token stays a manual step in the web UI.
+
+**Incident, 2026-11-18 → 2026-11-20:** `stockstalker`'s `ghcr-pull` PAT
+(created 2026-10-18, 30 days) expired 2026-11-17; GHCR answered
+`403 DENIED`. The `batch` CronJob sat in `ImagePullBackOff` from the
+2026-11-18 22:00 run and `concurrencyPolicy` held back the next two
+nights. `api` and `host` kept running from cached images. New PAT applied
+2026-11-20 23:28 UTC; the stuck run completed 23:31 UTC (31/31 tickers).
+The 2026-11-19 and -20 runs were not backfilled. Expiry of the new token is
+in the password manager; §5's Discord alert would have caught this.

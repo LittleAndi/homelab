@@ -28,12 +28,15 @@ When a decision changes, update its **Status** and add a dated
 
 ## Open items
 
-- **ADR-0018**: Flux v2.10.1 from OCI artifacts decided 2026-11-21. Left:
+- **ADR-0018**: Flux v2.10.1 from OCI artifacts decided 2026-11-21; pull
+  secrets via `scripts/ghcr-pull.sh` (expired `ghcr-pull` PAT replaced
+  2026-11-20, `batch` caught up). Left:
   install Flux and add `clusters/homelab/` + the artifact workflow;
-  `scripts/sync-site-values.sh`; `ghcr-flux` PAT (expiry in the password
-  manager) and the Discord provider; move `stockstalker` over first (fix
-  the `batch` `ImagePullBackOff` seen 2026-11-20); later decide on
-  `HelmRelease`s for the Helm-installed apps.
+  `scripts/sync-site-values.sh`; `ghcr-flux` via `ghcr-pull.sh` and the
+  Discord provider; make public app repos' GHCR images public; move
+  `stockstalker` over first; renew the GHCR PAT before its expiry
+  (password manager); later decide on `HelmRelease`s for the
+  Helm-installed apps.
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
   `backup`) decided 2026-10-28; created 2026-10-29 (datasets, Sanoid). `tank/nosnap` + `[nosnap]` share added;
   `hgst/bulk` + `[bulk]` kept for now. Left: old container is Hot, 1,139 GB in 3.85M files (~209
@@ -165,7 +168,7 @@ homelab/
 ├── clusters/homelab/                 ← ADR-0018: Flux (flux-system, infra, tenants) — planned
 ├── CLAUDE.md                         ← rules for Claude Code in this repo
 ├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh;
-│                                        ADR-0008: graceful-shutdown.sh
+│                                        ADR-0008: graceful-shutdown.sh; ADR-0018: ghcr-pull.sh
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)
 └── .pre-commit-config.yaml           ← gitleaks + site-value check
 ```
