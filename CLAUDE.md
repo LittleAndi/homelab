@@ -39,6 +39,11 @@ relevant ADR before changing anything.
    (ADR-0016) is checked out here and checked before its PR: `git fetch
    origin && git switch <branch>`, `pre-commit run --from-ref origin/main
    --to-ref HEAD`, `pre-commit run --hook-stage manual gitleaks-range`.
+9. **Flux-managed objects change through git** (ADR-0018). Anything from
+   `clusters/homelab/` or an app's Flux artifact is reverted if edited with
+   `kubectl`; for hands-on work `flux suspend kustomization <name>` first,
+   `flux resume` after. Helm releases (Nextcloud, monitoring, operator,
+   NFS provisioner) are still manual, rule 3.
 
 ## Access from this machine (WSL)
 
@@ -55,5 +60,6 @@ relevant ADR before changing anything.
 - `infra/proxmox-microk8s/monitoring/` — kube-prometheus-stack, host exporters (ADR-0013)
 - `infra/proxmox-ha/` — HAOS VM and backup scripts (ADR-0012)
 - `infra/proxmox-sandbox/` — Docker sandbox VM, host + guest scripts (ADR-0016)
+- `clusters/homelab/` — Flux: components, root sync, infra, tenants; install runbook (ADR-0018)
 - `scripts/` — `render.sh`, `check-site-values.sh`, `backup-local.sh` (ADR-0014),
-  `graceful-shutdown.sh` (ADR-0008), `ghcr-pull.sh` (ADR-0018)
+  `graceful-shutdown.sh` (ADR-0008), `ghcr-pull.sh`, `sync-site-values.sh` (ADR-0018)

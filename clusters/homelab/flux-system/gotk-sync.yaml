@@ -1,0 +1,56 @@
+# Root sync (ADR-0018 §2): this directory tree, pushed by
+# .github/workflows/flux-artifact.yml as a signed OCI artifact. Applied once by
+# hand at install; after that Flux manages it from the artifact.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: homelab-flux
+  namespace: flux-system
+spec:
+  interval: 2m
+  url: oci://ghcr.io/littleandi/homelab-flux
+  ref:
+    tag: main
+  # Not needed once the package is public; harmless until then.
+  secretRef:
+    name: ghcr-flux
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/LittleAndi/homelab/\.github/workflows/flux-artifact\.yml@refs/heads/main$
+---
+# Flux's own components. No postBuild: the CRDs contain literal ${var} text.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./flux-system
+  prune: true
+  sourceRef:
+    kind: OCIRepository
+    name: homelab-flux
+---
+# Namespaces, tenant RBAC, notifications. ${KEY} placeholders are filled from
+# the site-values ConfigMap (scripts/sync-site-values.sh, ADR-0018 §4).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./infra
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: OCIRepository
+    name: homelab-flux
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: site-values

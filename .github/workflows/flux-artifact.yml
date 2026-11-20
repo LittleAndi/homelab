@@ -1,0 +1,60 @@
+name: Flux artifact
+
+# ADR-0018 §2: package clusters/homelab/ as an OCI artifact in GHCR, sign it
+# with cosign keyless, then move the `main` tag the cluster follows. The
+# cluster verifies the signature against this workflow on refs/heads/main,
+# so the file name and branch are part of the trust policy
+# (clusters/homelab/flux-system/gotk-sync.yaml).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "clusters/**"
+      - ".github/workflows/flux-artifact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # cosign keyless
+
+concurrency:
+  group: flux-artifact
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT: oci://ghcr.io/littleandi/homelab-flux
+    steps:
+      - uses: actions/checkout@v7
+      - uses: fluxcd/flux2/action@v2.10.1
+        with:
+          version: 2.10.1
+      - uses: sigstore/cosign-installer@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build check # every kustomization must build before anything is pushed
+        run: |
+          for k in $(find clusters/homelab -name kustomization.yaml); do
+            kubectl kustomize "$(dirname "$k")" > /dev/null
+          done
+
+      - name: Push, sign, tag main
+        run: |
+          tag="sha-${GITHUB_SHA::7}"
+          ref=$(flux push artifact "$ARTIFACT:$tag" \
+            --path=clusters/homelab \
+            --source="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --revision="$GITHUB_REF_NAME@sha1:$GITHUB_SHA" \
+            --output=json | jq -r '.repository + "@" + .digest')
+          cosign sign --yes "$ref"
+          # Only a signed digest ever becomes `main`.
+          flux tag artifact "$ARTIFACT:$tag" --tag main
+          echo "pushed $ref as $tag and main" >> "$GITHUB_STEP_SUMMARY"

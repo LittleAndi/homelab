@@ -209,3 +209,25 @@ nights. `api` and `host` kept running from cached images. New PAT applied
 2026-11-20 23:28 UTC; the stuck run completed 23:31 UTC (31/31 tickers).
 The 2026-11-19 and -20 runs were not backfilled. Expiry of the new token is
 in the password manager; §5's Discord alert would have caught this.
+
+## Update 2026-11-21: `clusters/homelab/` written (not installed)
+
+Details settled while writing the files:
+
+- **Two Kustomizations from the root artifact:** `flux-system` (Flux's
+  own components and sync, **no** `postBuild`: the CRDs contain literal
+  `${var}` text) and `infra` (Namespaces, tenant RBAC, Discord alerts;
+  `postBuild` from `site-values`, `wait`, `timeout: 5m`). Tenants get
+  their own `tenants` Kustomization when the first one is added.
+- **Namespaces** in `infra/` carry `kustomize.toolkit.fluxcd.io/prune:
+  disabled`, like the data objects in app repos.
+- The homelab `OCIRepository` also uses `ghcr-flux` until the
+  `homelab-flux` package is made public (GHCR may create it private).
+- The workflow checks that every kustomization under `clusters/homelab/`
+  builds, pushes `sha-<short>`, signs that digest, and only then moves
+  `main`, so `main` never points at an unsigned artifact.
+- Components exported with `flux install --export` from the checksum-checked
+  v2.10.1 CLI: source-controller v1.10.2, kustomize-controller v1.10.2,
+  notification-controller v1.10.1.
+- New CLAUDE.md rule 9: Flux-managed objects change through git.
+- Install runbook: `clusters/homelab/README.md`.

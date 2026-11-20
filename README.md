@@ -30,10 +30,10 @@ When a decision changes, update its **Status** and add a dated
 
 - **ADR-0018**: Flux v2.10.1 from OCI artifacts decided 2026-11-21; pull
   secrets via `scripts/ghcr-pull.sh` (expired `ghcr-pull` PAT replaced
-  2026-11-20, `batch` caught up). Left:
-  install Flux and add `clusters/homelab/` + the artifact workflow;
-  `scripts/sync-site-values.sh`; `ghcr-flux` via `ghcr-pull.sh` and the
-  Discord provider; make public app repos' GHCR images public; move
+  2026-11-20, `batch` caught up); `clusters/homelab/`, artifact workflow
+  and `scripts/sync-site-values.sh` written 2026-11-21. Left: install Flux
+  (`clusters/homelab/README.md`: components, `ghcr-flux`, `site-values`,
+  Discord secret, root sync); make public app repos' GHCR images public; move
   `stockstalker` over first; renew the GHCR PAT before its expiry
   (password manager); later decide on `HelmRelease`s for the
   Helm-installed apps.
@@ -165,10 +165,10 @@ homelab/
 │   ├── proxmox-microk8s/monitoring/  ← ADR-0013: runbook, values.yaml, host exporters
 │   ├── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
 │   └── proxmox-sandbox/              ← ADR-0016: sandbox VM + guest setup scripts, README
-├── clusters/homelab/                 ← ADR-0018: Flux (flux-system, infra, tenants) — planned
+├── clusters/homelab/                 ← ADR-0018: Flux (flux-system, infra, tenants), install runbook
 ├── CLAUDE.md                         ← rules for Claude Code in this repo
 ├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh;
-│                                        ADR-0008: graceful-shutdown.sh; ADR-0018: ghcr-pull.sh
+│                                        ADR-0008: graceful-shutdown.sh; ADR-0018: ghcr-pull.sh, sync-site-values.sh
 ├── site.env.example                  ← keys + placeholder map (site.env itself is gitignored)
 └── .pre-commit-config.yaml           ← gitleaks + site-value check
 ```

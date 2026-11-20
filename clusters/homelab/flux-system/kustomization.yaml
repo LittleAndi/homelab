@@ -1,0 +1,9 @@
+# Flux itself (ADR-0018). gotk-components.yaml is generated, never edited:
+#   flux install --components=source-controller,kustomize-controller,notification-controller \
+#     --export > gotk-components.yaml
+# Upgrading Flux = regenerate with the new pinned CLI + an ADR-0018 Update.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - gotk-components.yaml
+  - gotk-sync.yaml

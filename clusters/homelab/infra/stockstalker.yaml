@@ -1,0 +1,34 @@
+# Tenant stockstalker (ADR-0018 §3): the namespace and the service account its
+# app artifact is applied with. Workloads come from the stock-stalker repo
+# (tenants/stockstalker.yaml, added when that repo publishes its artifact).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stockstalker
+  labels:
+    homelab/ghcr-pull: "true"   # private images: scripts/ghcr-pull.sh
+  annotations:
+    # Never delete a namespace holding data because a file went missing.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flux
+  namespace: stockstalker
+---
+# Built-in `admin`: everything inside the namespace, nothing cluster-scoped,
+# no RBAC beyond its own namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flux-admin
+  namespace: stockstalker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: ServiceAccount
+    name: flux
+    namespace: stockstalker
