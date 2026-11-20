@@ -56,4 +56,4 @@ relevant ADR before changing anything.
 - `infra/proxmox-ha/` — HAOS VM and backup scripts (ADR-0012)
 - `infra/proxmox-sandbox/` — Docker sandbox VM, host + guest scripts (ADR-0016)
 - `scripts/` — `render.sh`, `check-site-values.sh`, `backup-local.sh` (ADR-0014),
-  `graceful-shutdown.sh` (ADR-0008)
+  `graceful-shutdown.sh` (ADR-0008), `ghcr-pull.sh` (ADR-0018)
