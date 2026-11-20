@@ -24,9 +24,16 @@ When a decision changes, update its **Status** and add a dated
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
 | [0016](adr/adr-0016-docker-sandbox-vm.md) | Sandbox VM (111) for Docker Sandboxes (`sbx`, microVMs): 2 GB, on demand, firewalled off the LAN and tailnet | Accepted — deployed 2026-10-27 |
 | [0017](adr/adr-0017-ironwolf-mirror-bulk-backup.md) | IronWolf 8 TB ZFS mirror `tank` for bulk media and backups; off-site per dataset (only `tank/archive`) | Accepted — **`tank` created 2026-10-29** |
+| [0018](adr/adr-0018-flux-gitops-oci.md) | GitOps with Flux from signed OCI artifacts in GHCR: infra in this repo, app manifests in app repos, `main` deploys automatically | Accepted 2026-11-21 — not deployed yet |
 
 ## Open items
 
+- **ADR-0018**: Flux v2.10.1 from OCI artifacts decided 2026-11-21. Left:
+  install Flux and add `clusters/homelab/` + the artifact workflow;
+  `scripts/sync-site-values.sh`; `ghcr-flux` PAT (expiry in the password
+  manager) and the Discord provider; move `stockstalker` over first (fix
+  the `batch` `ImagePullBackOff` seen 2026-11-20); later decide on
+  `HelmRelease`s for the Helm-installed apps.
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
   `backup`) decided 2026-10-28; created 2026-10-29 (datasets, Sanoid). `tank/nosnap` + `[nosnap]` share added;
   `hgst/bulk` + `[bulk]` kept for now. Left: old container is Hot, 1,139 GB in 3.85M files (~209
@@ -155,6 +162,7 @@ homelab/
 │   ├── proxmox-microk8s/monitoring/  ← ADR-0013: runbook, values.yaml, host exporters
 │   ├── proxmox-ha/                   ← ADR-0012: HAOS VM + backup scripts, README
 │   └── proxmox-sandbox/              ← ADR-0016: sandbox VM + guest setup scripts, README
+├── clusters/homelab/                 ← ADR-0018: Flux (flux-system, infra, tenants) — planned
 ├── CLAUDE.md                         ← rules for Claude Code in this repo
 ├── scripts/                          ← ADR-0014: render.sh, check-site-values.sh, backup-local.sh;
 │                                        ADR-0008: graceful-shutdown.sh
