@@ -1,6 +1,6 @@
 # ADR-0018: GitOps Deploys with Flux from OCI Artifacts
 
-**Status:** Accepted 2026-11-21 — not deployed yet
+**Status:** Accepted 2026-11-21 — **Flux installed 2026-11-21** (homelab artifact synced, signature verified); no app tenants yet
 **Date:** 2026-11-21
 
 ## Context
@@ -231,3 +231,36 @@ Details settled while writing the files:
   notification-controller v1.10.1.
 - New CLAUDE.md rule 9: Flux-managed objects change through git.
 - Install runbook: `clusters/homelab/README.md`.
+
+## Update 2026-11-21: Flux installed
+
+Followed `clusters/homelab/README.md`:
+
+- **Workflow:** the first run failed at setup (`sigstore/cosign-installer@v4`
+  doesn't exist, no major tag); pinned `v4.1.3` (PR #13). The second run
+  pushed `homelab-flux:sha-807062c`, signed it, tagged `main`. GHCR made the
+  package **public** (inherited from the repo); `ghcr-flux` stays on the
+  root source anyway.
+- **Components:** `kubectl apply --server-side` of `gotk-components.yaml`;
+  `flux check` passed. Idle use **~60 MiB** for all three controllers
+  (18–23 Mi each), well under the estimate. All three landed on wk1 (next
+  to MariaDB); fine at this size, watch in Grafana.
+- **Secrets/values:** `ghcr-flux` (and `ghcr-pull` refreshed, same PAT) via
+  `scripts/ghcr-pull.sh`; `discord-webhook`; `site-values` via
+  `scripts/sync-site-values.sh` (6 keys).
+- **Root sync** applied 01:38 UTC. Verified:
+  - `homelab-flux` Ready with `SourceVerified=True` on
+    `main@sha256:b7eab16b…`: Flux 2.10 accepts the cosign v3 keyless
+    signature.
+  - `flux-system` and `infra` Kustomizations Ready on the same revision.
+  - `stockstalker` namespace adopted (label, prune disabled); its pods
+    untouched.
+  - Tenant RBAC by SubjectAccessReview: `stockstalker:flux` may create
+    Deployments, CronJobs, Secrets in `stockstalker`; not in `nextcloud`,
+    and no Namespaces, ClusterRoleBindings or StorageClasses.
+    **`kubectl auth can-i --as …` is useless through the Tailscale API
+    proxy:** it answered "yes" to everything (the proxy's impersonation
+    replaces `--as`). Use a SubjectAccessReview, or the break-glass
+    `microk8s kubectl` on cp1.
+  - Discord: a temporary failing `OCIRepository` produced an error event
+    that notification-controller dispatched without error; deleted after.
