@@ -31,8 +31,9 @@ When a decision changes, update its **Status** and add a dated
 - **ADR-0018**: Flux v2.10.1 installed 2026-11-21: `homelab-flux` artifact
   synced with verified signature, `infra` Ready, Discord alerts; pull
   secrets via `scripts/ghcr-pull.sh` (expired `ghcr-pull` PAT replaced
-  2026-11-20). Left: move `stockstalker` over (deploy job in its repo,
-  `tenants/stockstalker.yaml` here); make public app repos' GHCR images
+  2026-11-20). stockstalker tenant written 2026-11-21 (PRs here and in
+  stock-stalker). Left: merge stock-stalker first, then this repo, and
+  verify the takeover; make public app repos' GHCR images
   public; renew the GHCR PAT before its expiry (password manager); later
   decide on `HelmRelease`s for the Helm-installed apps.
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
@@ -94,6 +95,10 @@ When a decision changes, update its **Status** and add a dated
   `scripts/graceful-shutdown.sh` replaces the host's copy. Left: node kernels
   to Ubuntu 7.0.0-43 once released (rolling); find out why kubelets missed pod
   deletions during the reboot.
+- **ADR-0008 (dqlite, 2026-11-21)**: "database is locked" in kubelite on
+  the control plane every day, rising on cp1 15 → 58/day (Nov 14–20),
+  surfaced by a Flux alert. Left: find the cause (disk latency on the
+  NVMe, cp memory at 3 GB, leader load) before it turns into failed writes.
 - **ADR-0008 (power-off, 2026-11-13)**: first real `poweroff` (2026-11-12) and
   `start` (2026-11-13) with `scripts/graceful-shutdown.sh`; both worked as
   written. Left: run the `reboot` path for real at the next host reboot.

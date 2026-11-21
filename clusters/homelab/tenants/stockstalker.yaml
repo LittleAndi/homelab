@@ -1,0 +1,44 @@
+# Tenant stockstalker (ADR-0018 §3): follow the app repo's signed artifact and
+# apply it as stockstalker:flux (namespace `admin` only, infra/stockstalker.yaml).
+# Both objects live in the app namespace: a Kustomization can only use a
+# service account from its own namespace, and the OCIRepository reuses the
+# namespace's `ghcr-pull` secret (scripts/ghcr-pull.sh) for the private package.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: stockstalker
+  namespace: stockstalker
+spec:
+  interval: 2m
+  url: oci://ghcr.io/littleandi/stock-stalker-deploy
+  ref:
+    tag: main
+  secretRef:
+    name: ghcr-pull
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/LittleAndi/stock-stalker/\.github/workflows/images\.yml@refs/heads/main$
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: stockstalker
+  namespace: stockstalker
+  annotations:
+    # Removing this file must not garbage-collect the app (Flux deletes a
+    # deleted Kustomization's objects). Retire a tenant deliberately.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  interval: 10m
+  path: ./
+  prune: true
+  wait: true
+  timeout: 5m
+  targetNamespace: stockstalker
+  serviceAccountName: flux
+  sourceRef:
+    kind: OCIRepository
+    name: stockstalker
+  # No postBuild: app manifests contain shell ${vars} (ADR-0018 §4).
