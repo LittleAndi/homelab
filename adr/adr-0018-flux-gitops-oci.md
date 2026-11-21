@@ -1,6 +1,6 @@
 # ADR-0018: GitOps Deploys with Flux from OCI Artifacts
 
-**Status:** Accepted 2026-11-21 — **Flux installed 2026-11-21** (homelab artifact synced, signature verified); no app tenants yet
+**Status:** Accepted 2026-11-21 — **Flux installed 2026-11-21**; **stockstalker deployed by Flux since 2026-11-21** (first tenant)
 **Date:** 2026-11-21
 
 ## Context
@@ -299,3 +299,25 @@ status … database is locked" (dqlite). Not caused by Flux: kubelite on the
 control plane logged the same error every day before, rising on cp1 from
 15/day (Nov 14) to 58/day (Nov 20); cp3 similar, cp2 low. Flux reconciled
 fine and retries the status. Investigation is an ADR-0008 open item.
+(The retry at 02:18:06 succeeded; `flux-system` back to Ready.)
+
+## Update 2026-11-21: stockstalker deployed by Flux
+
+stock-stalker #139 merged (squash `183bab8`); its Images run built the
+three images and `deploy-artifact` published `stock-stalker-deploy:sha-183bab8`
+(private, signed, `create-secrets.sh` not included, all three `newTag`s
+pinned) and tagged `main`. Then homelab #15 (`cff92d1`).
+
+- `stockstalker` source `SourceVerified=True` on `main@sha256:2ac79512…`;
+  Kustomization Ready, health check passed in 16 s.
+- `api` and `host` rolled to `sha-183bab8` (02:46 UTC), `/health` 200.
+  Postgres only got the prune annotation, no restart (checked with a
+  server-side diff beforehand).
+- Schema at head `a6d3f9b2c871` (#140 `fx_rates`), already applied before
+  the rollout; `api`'s migrate step had nothing to do.
+- `imagePullPolicy` is `IfNotPresent` everywhere: Flux dropped the old
+  `kubectl` client-side-apply ownership, so the removed field fell back to
+  the default (no manual patch needed, contrary to the expectation).
+- The old ConfigMap `stockstalker-paths-tcb89b8t8t` (not in Flux's
+  inventory, only referenced by finished Jobs) deleted by hand.
+- `flux` CLI v2.10.1 installed in WSL at `~/.local/bin/flux`.
