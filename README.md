@@ -24,18 +24,16 @@ When a decision changes, update its **Status** and add a dated
 | [0015](adr/adr-0015-host-notifications-discord.md) | Host notifications: Proxmox notification system → Discord webhook; smartd/zed/failed backup units via mail to root | Accepted — deployed 2026-10-26; Discord only |
 | [0016](adr/adr-0016-docker-sandbox-vm.md) | Sandbox VM (111) for Docker Sandboxes (`sbx`, microVMs): 2 GB, on demand, firewalled off the LAN and tailnet | Accepted — deployed 2026-10-27 |
 | [0017](adr/adr-0017-ironwolf-mirror-bulk-backup.md) | IronWolf 8 TB ZFS mirror `tank` for bulk media and backups; off-site per dataset (only `tank/archive`) | Accepted — **`tank` created 2026-10-29** |
-| [0018](adr/adr-0018-flux-gitops-oci.md) | GitOps with Flux from signed OCI artifacts in GHCR: infra in this repo, app manifests in app repos, `main` deploys automatically | Accepted — **Flux installed 2026-11-21**; no app tenants yet |
+| [0018](adr/adr-0018-flux-gitops-oci.md) | GitOps with Flux from signed OCI artifacts in GHCR: infra in this repo, app manifests in app repos, `main` deploys automatically | Accepted — **Flux installed 2026-11-21**; stockstalker deployed by Flux since 2026-11-21 |
 
 ## Open items
 
-- **ADR-0018**: Flux v2.10.1 installed 2026-11-21: `homelab-flux` artifact
-  synced with verified signature, `infra` Ready, Discord alerts; pull
-  secrets via `scripts/ghcr-pull.sh` (expired `ghcr-pull` PAT replaced
-  2026-11-20). stockstalker tenant written 2026-11-21 (PRs here and in
-  stock-stalker). Left: merge stock-stalker first, then this repo, and
-  verify the takeover; make public app repos' GHCR images
-  public; renew the GHCR PAT before its expiry (password manager); later
-  decide on `HelmRelease`s for the Helm-installed apps.
+- **ADR-0018**: Flux v2.10.1 installed 2026-11-21 (`homelab-flux` synced,
+  signature verified, Discord alerts); **stockstalker deployed by Flux**
+  since 2026-11-21 (a merge to its `main` deploys); pull secrets via
+  `scripts/ghcr-pull.sh`. Left: make public app repos' GHCR images public
+  as they're added; renew the GHCR PAT before its expiry (password
+  manager); later decide on `HelmRelease`s for the Helm-installed apps.
 - **ADR-0017**: ZFS mirror `tank` (`media` no off-site, `archive` off-site,
   `backup`) decided 2026-10-28; created 2026-10-29 (datasets, Sanoid). `tank/nosnap` + `[nosnap]` share added;
   `hgst/bulk` + `[bulk]` kept for now. Left: old container is Hot, 1,139 GB in 3.85M files (~209
