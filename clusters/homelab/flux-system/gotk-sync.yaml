@@ -54,3 +54,21 @@ spec:
     substituteFrom:
       - kind: ConfigMap
         name: site-values
+---
+# Per app: an OCIRepository + Kustomization in the app's namespace, pointing at
+# the app repo's own artifact. After infra, which creates the namespaces and
+# service accounts. No postBuild here either: these files have no ${KEY}s.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenants
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infra
+  interval: 10m
+  path: ./tenants
+  prune: true
+  sourceRef:
+    kind: OCIRepository
+    name: homelab-flux

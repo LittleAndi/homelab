@@ -264,3 +264,38 @@ Followed `clusters/homelab/README.md`:
     `microk8s kubectl` on cp1.
   - Discord: a temporary failing `OCIRepository` produced an error event
     that notification-controller dispatched without error; deleted after.
+
+## Update 2026-11-21: stockstalker as the first tenant (PRs open)
+
+- **Tenant objects live in the app namespace**, not `flux-system`: a
+  Kustomization can only use a service account from its own namespace.
+  `clusters/homelab/tenants/stockstalker.yaml` puts the `OCIRepository`
+  (`stock-stalker-deploy:main`, cosign subject = stock-stalker's
+  `images.yml` on `refs/heads/main`) and the `Kustomization` (`flux` SA,
+  `targetNamespace`, `prune`, `wait`, 5m timeout, no `postBuild`) in
+  `stockstalker`. The source reuses the namespace's `ghcr-pull` secret, so
+  `ghcr-flux` is only needed for `homelab-flux`.
+- New root Kustomization **`tenants`** (`dependsOn: infra`). The tenant's
+  `Kustomization` object is annotated `prune: disabled`: deleting a Flux
+  Kustomization garbage-collects everything it applied, so removing the
+  file must not take the app with it.
+- The `flux-errors` Alert lists each tenant namespace explicitly (`name:
+  "*"` only matches the Alert's own namespace).
+- stock-stalker side: `images.yml` gains `deploy-artifact` (after the
+  image build: pin the three `newTag`s to `sha-<short>`, `kubectl
+  kustomize` check, `flux push artifact` without `create-secrets.sh`,
+  cosign sign, tag `main`; workflow-level concurrency so `main` never
+  moves backwards). `namespace.yaml` removed, `imagePullPolicy: Always`
+  dropped, `postgres` StatefulSet and `postgres-backups` PVC
+  `prune: disabled`, ops docs switched to `flux suspend`/`resume` around
+  manual scaling and restores.
+- The first sync rolls `api` and `host` from a ~14-day-old image to the
+  current `main` (holdings CSV import, `AVANZA_EXPORT_PATH`); `batch`
+  already runs it and already migrated the schema on 2026-11-20.
+- Discord delivery confirmed (the 01:39 test alert arrived).
+
+**Seen 2026-11-21:** a Discord alert for `flux-system`, "failed to update
+status … database is locked" (dqlite). Not caused by Flux: kubelite on the
+control plane logged the same error every day before, rising on cp1 from
+15/day (Nov 14) to 58/day (Nov 20); cp3 similar, cp2 low. Flux reconciled
+fine and retries the status. Investigation is an ADR-0008 open item.
