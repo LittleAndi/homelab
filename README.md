@@ -69,6 +69,10 @@ When a decision changes, update its **Status** and add a dated
   Grafana on the tailnet). Left: build the "Server overview" dashboard and
   export it as a ConfigMap; rotate the Entra client secret by 2028-10-31
   (sign-in added 2026-10-31). (Dashboard revisions pinned 2026-10-26.)
+  2026-11-25: telemetry for the hourly dqlite `database is locked` errors
+  drafted (PR); left: apply it (Flux PodMonitor merges itself; run
+  `dqlite-metrics.yml`, `helm upgrade`, redeploy `zfs-metrics.py`), then
+  read the result and decide on Sanoid timing.
 - **ADR-0012**: VM, static IP (.25), Tailscale Serve and NFS backups done
   2026-10-24. Left: store the HA backup encryption key; choose ZHA or
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
