@@ -197,3 +197,15 @@ grafana:
         datasource:
           - name: DS_PROMETHEUS
             value: Prometheus
+
+# Node-level textfile metrics: dqlite lock counter written by
+# monitoring/nodes/dqlite-metrics.yml (ADR-0013 Update 2026-11-25).
+prometheus-node-exporter:
+  extraArgs:
+    - --collector.textfile.directory=/host/textfile
+  extraHostVolumeMounts:
+    - name: textfile
+      hostPath: /var/lib/node_exporter/textfile
+      mountPath: /host/textfile
+      readOnly: true
+      type: DirectoryOrCreate

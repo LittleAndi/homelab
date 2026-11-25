@@ -8,10 +8,28 @@ kube-prometheus-stack in the cluster (namespace `monitoring`), Grafana at
 |---|---|
 | `values.yaml` | kube-prometheus-stack values (contains `${TAILNET}`: render before use) |
 | `host/20-setup-host-exporters.sh` | node_exporter, smartctl_exporter, pve-exporter, ZFS textfile timer, nftables limit; run on the host |
-| `host/zfs-metrics.py` | ZFS pool/dataset/snapshot metrics for the textfile collector |
+| `host/zfs-metrics.py` | ZFS pool/dataset/snapshot and txg sync-time metrics for the textfile collector |
+| `nodes/` | `dqlite-metrics.yml` + `dqlite-locks.sh`: dqlite lock-error counter on the control-plane nodes (ADR-0013 Update 2026-11-25) |
 | `dashboards/` | Exported Grafana dashboards as ConfigMaps (empty until the "Server overview" dashboard is built) |
 
 **Chart version:** `92.13.1` (app v0.94.1), picked 2026-10-26. Always pass `--version`.
+
+## Lock-error telemetry (2026-11-25)
+
+```bash
+# 1. Flux PodMonitor: merged to main, Flux applies it (clusters/homelab/infra/).
+# 2. dqlite counter on cp1-3, then mount it into node-exporter:
+(cd infra/proxmox-microk8s/ansible && ansible-playbook -i inventory.ini ../monitoring/nodes/dqlite-metrics.yml)
+scripts/render.sh
+helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring -f .rendered/infra/proxmox-microk8s/monitoring/values.yaml --version 92.13.1
+# 3. txg metrics: redeploy the host script
+scp infra/proxmox-microk8s/monitoring/host/zfs-metrics.py root@pve:/root/monitoring-host/ \
+  && ssh root@pve 'bash /root/monitoring-host/20-setup-host-exporters.sh'
+```
+
+Check: `dqlite_database_locked_total` (3 series), `zfs_pool_txg_sync_seconds_max`
+and `gotk_reconcile_duration_seconds_count` in Prometheus.
 
 ## 1. Host exporters
 

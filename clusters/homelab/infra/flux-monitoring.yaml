@@ -1,0 +1,30 @@
+# Flux controller metrics (gotk_*) for the monitoring stack (ADR-0013 Update
+# 2026-11-25). Prometheus picks up PodMonitors from any namespace
+# (podMonitorSelectorNilUsesHelmValues: false). Same shape as the upstream
+# flux2-monitoring-example.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flux-system
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/part-of: flux
+spec:
+  namespaceSelector:
+    matchNames:
+      - flux-system
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - helm-controller
+          - source-controller
+          - kustomize-controller
+          - notification-controller
+  podMetricsEndpoints:
+    - port: http-prom
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_phase]
+          action: keep
+          regex: Running

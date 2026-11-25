@@ -2,7 +2,7 @@
 """ZFS metrics for node_exporter's textfile collector (ADR-0013).
 
 Writes pool capacity and health, dataset usage/quota/reservation, and the
-newest snapshot time per dataset to
+newest snapshot time per dataset, and txg sync times to
 /var/lib/prometheus/node-exporter/zfs.prom. Run every minute by
 zfs-metrics.timer.
 
@@ -11,9 +11,11 @@ Snapshot age in PromQL:
 Received snapshots keep their source creation time, so on hgst/backup/* the
 same expression shows how far syncoid is behind.
 """
+import glob
 import os
 import subprocess
 import tempfile
+import time
 from collections import OrderedDict
 
 OUT_DIR = "/var/lib/prometheus/node-exporter"
@@ -101,6 +103,40 @@ def snapshots():
         add("zfs_dataset_snapshot_count", "Number of snapshots.", lbl, count[ds])
 
 
+def txgs():
+    """Sync/wait time of the transaction groups closed in the last minute.
+
+    Snapshots, destroys and big flushes make ZFS sync a txg; while it syncs,
+    writers (the VM disks on rpool, fsync) can stall. /proc/spl/kstat keeps
+    ~100 recent txgs; `birth` is CLOCK_MONOTONIC in ns. We export the max per
+    pool over the last 70 s so a short stall isn't averaged away by the
+    scrape interval (ADR-0013 Update 2026-11-25).
+    """
+    now = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
+    for path in glob.glob("/proc/spl/kstat/zfs/*/txgs"):
+        pool = path.split("/")[-2]
+        sync = wait = dirty = n = 0
+        with open(path) as f:
+            next(f, None)  # header
+            for line in f:
+                c = line.split()
+                if len(c) < 12 or c[2] != "C" or now - int(c[1]) > 70e9:
+                    continue
+                n += 1
+                dirty = max(dirty, int(c[3]))
+                wait = max(wait, (int(c[9]) + int(c[10])) / 1e9)  # qtime+wtime
+                sync = max(sync, int(c[11]) / 1e9)                # stime
+        lbl = {"pool": pool}
+        add("zfs_pool_txg_sync_seconds_max",
+            "Longest txg sync time among txgs closed in the last 70 s.", lbl, sync)
+        add("zfs_pool_txg_wait_seconds_max",
+            "Longest txg queue+wait time among txgs closed in the last 70 s.", lbl, wait)
+        add("zfs_pool_txg_dirty_bytes_max",
+            "Largest txg dirty data among txgs closed in the last 70 s.", lbl, dirty)
+        add("zfs_pool_txg_closed_count",
+            "Txgs closed in the last 70 s.", lbl, n)
+
+
 def write():
     lines = []
     for name, (help_text, mtype, samples) in families.items():
@@ -122,4 +158,5 @@ if __name__ == "__main__":
     pools()
     datasets()
     snapshots()
+    txgs()
     write()

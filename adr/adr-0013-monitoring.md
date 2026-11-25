@@ -219,8 +219,45 @@ Grafana.
 **Dependency:** new logins now depend on Microsoft being reachable; the local
 admin doesn't.
 
+## Update 2026-11-25: telemetry for dqlite lock errors
+
+**Problem.** The Flux Discord alert fires 1–2 times a day with
+`database is locked` on a status write, close to `:00`. Investigation: k8s-dqlite
+logs about 80 such errors a day per control-plane node, on all three nodes;
+minute `:00` has about 5× the average (22 vs ~4 over 3 days on cp1). Most are
+retried by kine; Flux's alert is the few that surface. Existing metrics
+(apiserver/etcd latency, disk time, PSI) show nothing at `:00` at 1-minute
+resolution, so a stall of a second or two is averaged away.
+
+**Hypothesis (not proven).** Sanoid's snapshot and prune on the host at `:00`
+forces txg syncs on `rpool`, where the VM disks live, and briefly stalls
+dqlite's fsyncs. The additions below test it.
+
+**Added** (no alerts, per this ADR):
+- Flux `PodMonitor` (`clusters/homelab/infra/flux-monitoring.yaml`, deployed by
+  Flux) for `gotk_*` metrics, e.g. `gotk_reconcile_condition`.
+- `zfs_pool_txg_{sync,wait}_seconds_max`, `zfs_pool_txg_dirty_bytes_max` and
+  `zfs_pool_txg_closed_count` in `zfs-metrics.py`: the max over the txgs closed
+  in the last 70 s, so short stalls survive the scrape interval.
+- `dqlite_database_locked_total` on the control-plane nodes: a systemd timer
+  (`monitoring/nodes/`, Ansible) counts the dqlite journal lines into the
+  node_exporter textfile directory, which the DaemonSet now mounts
+  (`prometheus-node-exporter` in `values.yaml`). Resolution is 1 minute.
+
+**Reading it.** Compare `increase(dqlite_database_locked_total[5m])` by node
+with `zfs_pool_txg_sync_seconds_max{pool="rpool"}` and the Sanoid run times.
+If locks follow txg stalls, move or thin the Sanoid/syncoid timers (hourly
+snapshots on `rpool` look unneeded: `template_os` is daily-only). If not, look
+at dqlite itself (leader churn, snapshots).
+
+**Not changed:** the Flux Discord `Alert` still fires on every error; nothing
+is excluded until the cause is known.
+
 ## Open items
 
+- Apply the 2026-11-25 telemetry (PodMonitor via Flux; `dqlite-metrics.yml`;
+  `helm upgrade` for the textfile mount; copy `zfs-metrics.py` to the host),
+  then decide on Sanoid timing from the data.
 - Rotate the Entra client secret by 2028-10-31 (runbook §4). Nothing alerts
   on its expiry.
 - ~~Run script 20 on the host. Verify the three ports from cp1, and that

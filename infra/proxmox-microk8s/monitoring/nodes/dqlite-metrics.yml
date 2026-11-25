@@ -1,0 +1,52 @@
+---
+# dqlite lock-error counter on the control-plane nodes (ADR-0013 Update
+# 2026-11-25). From infra/proxmox-microk8s/ansible:
+#   ansible-playbook -i inventory.ini ../monitoring/nodes/dqlite-metrics.yml
+# The node-exporter DaemonSet reads the textfile dir (values.yaml, helm upgrade).
+- name: dqlite lock counter for node_exporter
+  hosts: control_plane
+  become: true
+  tasks:
+    - name: Textfile directory
+      ansible.builtin.file:
+        path: /var/lib/node_exporter/textfile
+        state: directory
+        mode: "0755"
+
+    - name: Counter script
+      ansible.builtin.copy:
+        src: dqlite-locks.sh
+        dest: /usr/local/sbin/dqlite-locks
+        mode: "0755"
+
+    - name: systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/dqlite-locks.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Count k8s-dqlite lock errors for node_exporter (ADR-0013)
+          [Service]
+          Type=oneshot
+          Nice=10
+          ExecStart=/usr/local/sbin/dqlite-locks
+
+    - name: systemd timer
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/dqlite-locks.timer
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=Count k8s-dqlite lock errors every minute
+          [Timer]
+          OnCalendar=*:*:30
+          AccuracySec=1s
+          [Install]
+          WantedBy=timers.target
+
+    - name: Enable timer
+      ansible.builtin.systemd:
+        name: dqlite-locks.timer
+        enabled: true
+        state: started
+        daemon_reload: true
