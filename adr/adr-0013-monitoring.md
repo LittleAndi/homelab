@@ -253,11 +253,52 @@ at dqlite itself (leader churn, snapshots).
 **Not changed:** the Flux Discord `Alert` still fires on every error; nothing
 is excluded until the cause is known.
 
+## Update 2026-11-26: first results from the lock telemetry
+
+The 2026-11-25 telemetry is live: `gotk_*`, `dqlite_database_locked_total` and
+`zfs_pool_txg_*` are all in Prometheus. Data covers about 35 h from
+2026-11-25 08:22 UTC.
+
+**One alert traced** (`infra` status write, 12:58:54 UTC):
+- cp1 and cp2 logged lock errors within the same second or so, on node,
+  API server and Flux leader leases besides the `infra` status. cp3 logged no
+  match. Flux recovered by itself; `kustomize-controller` didn't restart.
+- `rpool` had a 1.22 s txg sync (earlier samples from 12:50: at most 0.29 s)
+  in a 70 s window that includes the error. Peak dirty data was about 37 MB,
+  which is ordinary.
+- NVMe averages over 2 minutes were slightly high: flush 4.7 ms (35 h median
+  3.6, p95 4.2), write 3.5 ms (median 2.6, p95 3.0).
+- Not Sanoid: it started at 13:00:06 UTC, after the error.
+
+**All 35 h:** 321 lock lines in the k8s-dqlite journals (cp1 169, cp2 53,
+cp3 99), matching the counter.
+- Minutes near an `rpool` txg sync of 0.25 s or more (highest value within a
+  minute either side) were 24 % of all minutes and had about 51 % of the lock
+  errors. The other half came with shorter syncs.
+- Only 6 minutes were near a sync of 1 s or more, and 17 % of them had a
+  lock error: too few to conclude anything.
+- By journal timestamp, `:00` isn't among the 10 busiest minutes of the hour
+  (busiest: `:50` with 16 and `:58` with 14; mean 5.3). The earlier 3-day cp1
+  finding of about 5× at `:00` didn't repeat in this window.
+
+**Decision:** leave the Sanoid/syncoid timers as they are. The data doesn't
+show them as the main cause. Slow `rpool` syncs look like one contributor,
+not a proven or complete explanation. The Flux alert stays unchanged.
+
+**Gaps.** The txg metric is a 70 s maximum, so it can't place a slow sync at
+the same second as an error. The kernel keeps only the last 100 txgs per pool,
+so per-txg times for older events are gone. NVMe rates average over 2 minutes.
+
 ## Open items
 
-- Apply the 2026-11-25 telemetry (PodMonitor via Flux; `dqlite-metrics.yml`;
-  `helm upgrade` for the textfile mount; copy `zfs-metrics.py` to the host),
-  then decide on Sanoid timing from the data.
+- ~~Apply the 2026-11-25 telemetry~~ Done; confirmed 2026-11-26.
+- Find the cause of the lock errors:
+  - log each slow `rpool` txg on the host with its wall-clock time, to match
+    against the journal timestamps (proposed, not built);
+  - after a few more days, redo the comparison and add NVMe latency and
+    per-VM write load;
+  - check dqlite itself (leader changes, snapshots), including errors that
+    come without a slow sync.
 - Rotate the Entra client secret by 2028-10-31 (runbook §4). Nothing alerts
   on its expiry.
 - ~~Run script 20 on the host. Verify the three ports from cp1, and that
