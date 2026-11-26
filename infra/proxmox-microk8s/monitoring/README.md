@@ -9,6 +9,7 @@ kube-prometheus-stack in the cluster (namespace `monitoring`), Grafana at
 | `values.yaml` | kube-prometheus-stack values (contains `${TAILNET}`: render before use) |
 | `host/20-setup-host-exporters.sh` | node_exporter, smartctl_exporter, pve-exporter, ZFS textfile timer, nftables limit; run on the host |
 | `host/zfs-metrics.py` | ZFS pool/dataset/snapshot and txg sync-time metrics for the textfile collector |
+| `host/21-setup-slow-txg-log.sh`, `host/slow-txg-log.py` | Temporary: journal line per slow `rpool` txg sync (ADR-0013 Update 2026-11-26) |
 | `nodes/` | `dqlite-metrics.yml` + `dqlite-locks.sh`: dqlite lock-error counter on the control-plane nodes (ADR-0013 Update 2026-11-25) |
 | `dashboards/` | Exported Grafana dashboards as ConfigMaps (empty until the "Server overview" dashboard is built) |
 
@@ -30,6 +31,18 @@ scp infra/proxmox-microk8s/monitoring/host/zfs-metrics.py root@pve:/root/monitor
 
 Check: `dqlite_database_locked_total` (3 series), `zfs_pool_txg_sync_seconds_max`
 and `gotk_reconcile_duration_seconds_count` in Prometheus.
+
+**Slow-txg log (2026-11-26, temporary).** Journal line for each `rpool` txg
+sync of 0.25 s or more (`THRESHOLD=…` to change it). Removal commands are in
+the setup script's header.
+
+```bash
+scp infra/proxmox-microk8s/monitoring/host/{slow-txg-log.py,21-setup-slow-txg-log.sh} root@pve:/root/monitoring-host/ \
+  && ssh root@pve 'bash /root/monitoring-host/21-setup-slow-txg-log.sh'
+# Read both sides in UTC:
+ssh root@pve 'journalctl -u slow-txg-log --utc -o cat --since "3 days ago"'
+ssh ubuntu@192.168.1.20 'sudo journalctl -u snap.microk8s.daemon-k8s-dqlite --utc -o short-iso-precise --since "3 days ago" | grep "database is locked"'   # also .21, .22
+```
 
 ## 1. Host exporters
 

@@ -69,10 +69,9 @@ When a decision changes, update its **Status** and add a dated
   Grafana on the tailnet). Left: build the "Server overview" dashboard and
   export it as a ConfigMap; rotate the Entra client secret by 2028-10-31
   (sign-in added 2026-10-31). (Dashboard revisions pinned 2026-10-26.)
-  2026-11-25: telemetry for the hourly dqlite `database is locked` errors
-  drafted (PR); left: apply it (Flux PodMonitor merges itself; run
-  `dqlite-metrics.yml`, `helm upgrade`, redeploy `zfs-metrics.py`), then
-  read the result and decide on Sanoid timing.
+  2026-11-26: lock-error telemetry live; first 35 h don't point to Sanoid as
+  the main cause (timers unchanged), slow `rpool` syncs look like one
+  contributor. Left: see the ADR-0008 dqlite item.
 - **ADR-0012**: VM, static IP (.25), Tailscale Serve and NFS backups done
   2026-10-24. Left: store the HA backup encryption key; choose ZHA or
   Zigbee2MQTT; Z-Wave JS + Z-Stick NVM backup before pairing; USB extension
@@ -101,6 +100,11 @@ When a decision changes, update its **Status** and add a dated
   the control plane every day, rising on cp1 15 → 58/day (Nov 14–20),
   surfaced by a Flux alert. Left: find the cause (disk latency on the
   NVMe, cp memory at 3 GB, leader load) before it turns into failed writes.
+  2026-11-26 (ADR-0013 Update): about half the errors fall near `rpool` txg
+  syncs of 0.25 s or more, but the txg metric had a clock bug and missed
+  many txgs (fixed), so that figure isn't reliable. `slow-txg-log` runs on
+  the host since 2026-11-26. Next: compare it with the dqlite journals (from
+  about 11-29); check dqlite leader changes and snapshots.
 - **ADR-0008 (power-off, 2026-11-13)**: first real `poweroff` (2026-11-12) and
   `start` (2026-11-13) with `scripts/graceful-shutdown.sh`; both worked as
   written. Left: run the `reboot` path for real at the next host reboot.
