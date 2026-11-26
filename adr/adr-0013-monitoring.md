@@ -263,9 +263,10 @@ The 2026-11-25 telemetry is live: `gotk_*`, `dqlite_database_locked_total` and
 - cp1 and cp2 logged lock errors within the same second or so, on node,
   API server and Flux leader leases besides the `infra` status. cp3 logged no
   match. Flux recovered by itself; `kustomize-controller` didn't restart.
-- `rpool` had a 1.22 s txg sync (earlier samples from 12:50: at most 0.29 s)
-  in a 70 s window that includes the error. Peak dirty data was about 37 MB,
-  which is ordinary.
+- `rpool` had a 1.22 s txg sync in a txg born between about 12:58:37 and
+  12:59:14, a span that includes the error. Earlier samples from 12:50 showed
+  at most 0.29 s, but they had gaps (below). Peak dirty data in the same span
+  was about 37 MB, which is ordinary.
 - NVMe averages over 2 minutes were slightly high: flush 4.7 ms (35 h median
   3.6, p95 4.2), write 3.5 ms (median 2.6, p95 3.0).
 - Not Sanoid: it started at 13:00:06 UTC, after the error.
@@ -274,7 +275,8 @@ The 2026-11-25 telemetry is live: `gotk_*`, `dqlite_database_locked_total` and
 cp3 99), matching the counter.
 - Minutes near an `rpool` txg sync of 0.25 s or more (highest value within a
   minute either side) were 24 % of all minutes and had about 51 % of the lock
-  errors. The other half came with shorter syncs.
+  errors. **Not reliable:** the metric missed many txgs (below), so some of
+  the other errors may have had a slow sync that wasn't seen.
 - Only 6 minutes were near a sync of 1 s or more, and 17 % of them had a
   lock error: too few to conclude anything.
 - By journal timestamp, `:00` isn't among the 10 busiest minutes of the hour
@@ -285,18 +287,41 @@ cp3 99), matching the counter.
 show them as the main cause. Slow `rpool` syncs look like one contributor,
 not a proven or complete explanation. The Flux alert stays unchanged.
 
-**Gaps.** The txg metric is a 70 s maximum, so it can't place a slow sync at
-the same second as an error. The kernel keeps only the last 100 txgs per pool,
-so per-txg times for older events are gone. NVMe rates average over 2 minutes.
+**Bug in the txg metrics, fixed 2026-11-26.** The kstat's `birth` is
+`CLOCK_MONOTONIC_RAW`, but `zfs-metrics.py` compared it with
+`CLOCK_MONOTONIC`. The two were 33.9 s apart after 13.9 days of uptime
+(about 2.4 s/day), so the "last 70 s" window really covered about the last
+36–40 s of runs 60–70 s apart. Many txgs were never counted, and after about
+four weeks of uptime the metric would have shown nothing. It now uses the raw
+clock and an 80 s window. On the host, the window went from 6–7 `rpool` txgs
+to 16, as expected at one per 5 s. `zfs_pool_txg_*` data from before the fix
+(2026-11-26 about 18:20 UTC) has these gaps.
+
+**Other gaps.** Even fixed, the metric is a maximum over a window, so it can't
+place a slow sync at the same second as an error. The kernel keeps only the
+last 100 txgs per pool (about 8 minutes here), so per-txg times for older
+events are gone. NVMe rates average over 2 minutes.
+
+**Added: slow-txg log** (temporary). `host/slow-txg-log.py` runs as
+`slow-txg-log.service` on the host (installed by
+`host/21-setup-slow-txg-log.sh`, running since 2026-11-26 18:21 UTC). It
+writes one journal line per `rpool` txg whose sync took 0.25 s or more, with
+sync start and end in UTC, and a `gap` line if txgs were missed. Remove it
+once the cause is known.
+
+**Reading it.** After 2–3 days, line up the `slow` lines with the lock lines
+in the k8s-dqlite journals. Compare the share of errors that fall during or
+just after a slow sync with the share of all time those spans cover. Overlap
+well above that share points to a link, though not to which causes which (a
+slow disk could delay both). No more overlap than that points at dqlite.
 
 ## Open items
 
 - ~~Apply the 2026-11-25 telemetry~~ Done; confirmed 2026-11-26.
 - Find the cause of the lock errors:
-  - log each slow `rpool` txg on the host with its wall-clock time, to match
-    against the journal timestamps (proposed, not built);
-  - after a few more days, redo the comparison and add NVMe latency and
-    per-VM write load;
+  - after 2–3 days (from about 2026-11-29), compare the `slow-txg-log` lines
+    with the dqlite journal timestamps, and add NVMe latency and per-VM write
+    load; then remove the logger;
   - check dqlite itself (leader changes, snapshots), including errors that
     come without a slow sync.
 - Rotate the Entra client secret by 2028-10-31 (runbook §4). Nothing alerts

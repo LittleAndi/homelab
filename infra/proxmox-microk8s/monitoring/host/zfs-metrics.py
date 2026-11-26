@@ -104,15 +104,18 @@ def snapshots():
 
 
 def txgs():
-    """Sync/wait time of the transaction groups closed in the last minute.
+    """Sync/wait time of recently committed transaction groups.
 
     Snapshots, destroys and big flushes make ZFS sync a txg; while it syncs,
     writers (the VM disks on rpool, fsync) can stall. /proc/spl/kstat keeps
-    ~100 recent txgs; `birth` is CLOCK_MONOTONIC in ns. We export the max per
-    pool over the last 70 s so a short stall isn't averaged away by the
-    scrape interval (ADR-0013 Update 2026-11-25).
+    ~100 recent txgs; `birth` is CLOCK_MONOTONIC_RAW in ns (not
+    CLOCK_MONOTONIC: NTP slewing moves the two apart by seconds per day). We
+    export the max per pool over txgs born in the last 80 s, so a short stall
+    isn't averaged away by the scrape interval. Runs are 60-70 s apart and a
+    txg is only counted once committed, hence the overlap (ADR-0013 Updates
+    2026-11-25 and 2026-11-26).
     """
-    now = time.clock_gettime_ns(time.CLOCK_MONOTONIC)
+    now = time.clock_gettime_ns(time.CLOCK_MONOTONIC_RAW)
     for path in glob.glob("/proc/spl/kstat/zfs/*/txgs"):
         pool = path.split("/")[-2]
         sync = wait = dirty = n = 0
@@ -120,7 +123,7 @@ def txgs():
             next(f, None)  # header
             for line in f:
                 c = line.split()
-                if len(c) < 12 or c[2] != "C" or now - int(c[1]) > 70e9:
+                if len(c) < 12 or c[2] != "C" or now - int(c[1]) > 80e9:
                     continue
                 n += 1
                 dirty = max(dirty, int(c[3]))
@@ -128,13 +131,13 @@ def txgs():
                 sync = max(sync, int(c[11]) / 1e9)                # stime
         lbl = {"pool": pool}
         add("zfs_pool_txg_sync_seconds_max",
-            "Longest txg sync time among txgs closed in the last 70 s.", lbl, sync)
+            "Longest txg sync time among txgs born in the last 80 s.", lbl, sync)
         add("zfs_pool_txg_wait_seconds_max",
-            "Longest txg queue+wait time among txgs closed in the last 70 s.", lbl, wait)
+            "Longest txg queue+wait time among txgs born in the last 80 s.", lbl, wait)
         add("zfs_pool_txg_dirty_bytes_max",
-            "Largest txg dirty data among txgs closed in the last 70 s.", lbl, dirty)
+            "Largest txg dirty data among txgs born in the last 80 s.", lbl, dirty)
         add("zfs_pool_txg_closed_count",
-            "Txgs closed in the last 70 s.", lbl, n)
+            "Committed txgs born in the last 80 s.", lbl, n)
 
 
 def write():

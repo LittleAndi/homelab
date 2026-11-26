@@ -101,8 +101,10 @@ When a decision changes, update its **Status** and add a dated
   surfaced by a Flux alert. Left: find the cause (disk latency on the
   NVMe, cp memory at 3 GB, leader load) before it turns into failed writes.
   2026-11-26 (ADR-0013 Update): about half the errors fall near `rpool` txg
-  syncs of 0.25 s or more. Next: timestamped log of slow txgs (proposed),
-  more days of data, dqlite leader changes and snapshots.
+  syncs of 0.25 s or more, but the txg metric had a clock bug and missed
+  many txgs (fixed), so that figure isn't reliable. `slow-txg-log` runs on
+  the host since 2026-11-26. Next: compare it with the dqlite journals (from
+  about 11-29); check dqlite leader changes and snapshots.
 - **ADR-0008 (power-off, 2026-11-13)**: first real `poweroff` (2026-11-12) and
   `start` (2026-11-13) with `scripts/graceful-shutdown.sh`; both worked as
   written. Left: run the `reboot` path for real at the next host reboot.
